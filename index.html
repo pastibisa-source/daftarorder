@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axentra Order Manager</title>
+  <meta name="description" content="Order Manager untuk mengelola pesanan, pembayaran, deadline, dan status pekerjaan.">
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --navy:#102a43;
+      --navy-2:#173f63;
+      --blue:#2f80ed;
+      --blue-soft:#eaf3ff;
+      --gold:#d5a63a;
+      --gold-soft:#fff7df;
+      --white:#ffffff;
+      --bg:#f4f7fb;
+      --text:#172b4d;
+      --muted:#718096;
+      --border:#e4eaf1;
+      --success:#16845b;
+      --success-soft:#e9f8f1;
+      --warning:#b7791f;
+      --warning-soft:#fff7e6;
+      --danger:#c53030;
+      --danger-soft:#fff0f0;
+      --shadow:0 12px 35px rgba(16,42,67,.08);
+      --radius:16px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .hidden{display:none!important}
+
+    /* LOGIN */
+    #loginScreen{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      background:
+        radial-gradient(circle at 10% 10%,rgba(47,128,237,.10),transparent 30%),
+        radial-gradient(circle at 90% 90%,rgba(213,166,58,.12),transparent 30%),
+        #f7f9fc;
+    }
+    .login-card{
+      width:min(430px,100%);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      padding:38px;
+    }
+    .login-brand{text-align:center;margin-bottom:28px}
+    .login-brand img{
+      width:82px;height:82px;object-fit:contain;margin-bottom:12px;
+    }
+    .login-brand h1{font-size:24px;color:var(--navy)}
+    .login-brand p{color:var(--muted);font-size:13px;margin-top:6px}
+    .form-group{margin-bottom:17px}
+    .form-group label{
+      display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:#34495e;
+    }
+    .input-wrap{position:relative}
+    .input-wrap input{padding-right:46px}
+    input,select,textarea{
+      width:100%;
+      border:1px solid #d7e0ea;
+      border-radius:10px;
+      padding:12px 13px;
+      outline:none;
+      background:#fff;
+      color:var(--text);
+      transition:.2s;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--blue);
+      box-shadow:0 0 0 3px rgba(47,128,237,.10);
+    }
+    textarea{resize:vertical;min-height:95px}
+    .toggle-password{
+      position:absolute;right:8px;top:50%;transform:translateY(-50%);
+      border:0;background:transparent;color:var(--muted);padding:7px;
+    }
+    .primary-btn{
+      width:100%;border:0;border-radius:11px;padding:13px 16px;
+      background:var(--navy);color:#fff;font-weight:700;
+      transition:.2s;
+    }
+    .primary-btn:hover{background:var(--navy-2);transform:translateY(-1px)}
+    .login-note{text-align:center;font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
+
+    /* APP */
+    #app{min-height:100vh;display:flex}
+    .sidebar{
+      width:250px;background:var(--navy);color:#fff;position:fixed;
+      top:0;bottom:0;left:0;z-index:50;padding:20px 14px;
+      display:flex;flex-direction:column;
+    }
+    .brand{
+      display:flex;align-items:center;gap:11px;padding:8px 10px 25px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    .brand img{width:42px;height:42px;object-fit:contain;background:#fff;border-radius:10px}
+    .brand strong{font-size:15px;line-height:1.2}
+    .brand small{display:block;color:#b8c8d8;margin-top:3px;font-size:10px}
+    .nav{margin-top:22px;display:grid;gap:6px}
+    .nav button{
+      border:0;background:transparent;color:#c9d6e3;text-align:left;
+      padding:12px 13px;border-radius:10px;font-weight:600;
+      display:flex;align-items:center;gap:11px;
+    }
+    .nav button:hover,.nav button.active{background:rgba(255,255,255,.10);color:#fff}
+    .nav-icon{width:20px;text-align:center}
+    .sidebar-bottom{margin-top:auto}
+    .user-mini{
+      background:rgba(255,255,255,.07);padding:12px;border-radius:12px;
+      margin-bottom:9px;overflow:hidden;
+    }
+    .user-mini strong{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .user-mini span{font-size:10px;color:#b8c8d8}
+    .logout-btn{
+      width:100%;border:1px solid rgba(255,255,255,.15);background:transparent;
+      color:#fff;border-radius:10px;padding:10px;font-weight:600;
+    }
+    .logout-btn:hover{background:rgba(255,255,255,.08)}
+
+    .main{margin-left:250px;width:calc(100% - 250px);min-width:0}
+    .topbar{
+      height:74px;background:#fff;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 30px;position:sticky;top:0;z-index:30;
+    }
+    .top-title h2{font-size:20px}
+    .top-title p{font-size:12px;color:var(--muted);margin-top:3px}
+    .top-actions{display:flex;align-items:center;gap:10px}
+    .search{
+      width:260px;position:relative;
+    }
+    .search input{padding-left:38px;background:#f8fafc}
+    .search span{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
+    .icon-btn{
+      width:40px;height:40px;border:1px solid var(--border);background:#fff;
+      border-radius:10px;color:var(--muted);
+    }
+    .icon-btn:hover{background:#f7fafc}
+    .content{padding:28px 30px 40px}
+    .section-head{
+      display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px;
+    }
+    .section-head h3{font-size:18px}
+    .section-head p{font-size:12px;color:var(--muted);margin-top:4px}
+    .add-btn{
+      border:0;background:var(--gold);color:#fff;border-radius:10px;
+      padding:11px 16px;font-weight:700;box-shadow:0 5px 14px rgba(213,166,58,.22);
+    }
+    .add-btn:hover{filter:brightness(.96);transform:translateY(-1px)}
+
+    /* STATS */
+    .stats{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;
+    }
+    .stat{
+      background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+      padding:19px;box-shadow:0 5px 18px rgba(16,42,67,.04);
+      display:flex;justify-content:space-between;gap:10px;
+    }
+    .stat-label{font-size:12px;color:var(--muted);font-weight:600}
+    .stat-value{font-size:24px;font-weight:800;margin-top:8px;color:var(--navy)}
+    .stat-icon{
+      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      background:var(--blue-soft);color:var(--blue);font-size:18px;
+    }
+    .stat:nth-child(2) .stat-icon{background:var(--gold-soft);color:var(--gold)}
+    .stat:nth-child(3) .stat-icon{background:var(--warning-soft);color:var(--warning)}
+    .stat:nth-child(4) .stat-icon{background:var(--success-soft);color:var(--success)}
+
+    /* TABLE */
+    .panel{
+      background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+      box-shadow:0 5px 18px rgba(16,42,67,.04);overflow:hidden;
+    }
+    .filterbar{
+      padding:17px;border-bottom:1px solid var(--border);
+      display:flex;flex-wrap:wrap;gap:9px;align-items:center;
+    }
+    .filterbar select{width:auto;min-width:145px;padding:9px 11px}
+    .filter-count{margin-left:auto;color:var(--muted);font-size:12px}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:920px}
+    th,td{padding:14px 16px;text-align:left;border-bottom:1px solid #edf1f5;font-size:12px;vertical-align:middle}
+    th{background:#fbfcfe;color:#66788a;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+    tbody tr:hover{background:#fbfdff}
+    td strong{font-size:12px;color:var(--navy)}
+    .muted{color:var(--muted)}
+    .price{font-weight:800;color:var(--navy)}
+    .badge{
+      display:inline-flex;align-items:center;gap:5px;border-radius:999px;
+      padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap;
+    }
+    .badge.success{background:var(--success-soft);color:var(--success)}
+    .badge.warning{background:var(--warning-soft);color:var(--warning)}
+    .badge.danger{background:var(--danger-soft);color:var(--danger)}
+    .badge.info{background:var(--blue-soft);color:var(--blue)}
+    .actions{display:flex;gap:6px}
+    .action-btn{
+      width:31px;height:31px;border:1px solid var(--border);background:#fff;
+      border-radius:8px;font-size:13px;
+    }
+    .action-btn.edit{color:var(--blue)}
+    .action-btn.delete{color:var(--danger)}
+    .action-btn:hover{background:#f7fafc}
+
+    .empty{
+      padding:55px 20px;text-align:center;color:var(--muted)
+    }
+    .empty .empty-icon{font-size:40px;margin-bottom:10px}
+    .empty h4{color:var(--navy);margin-bottom:5px}
+
+    /* MODAL */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(9,24,39,.48);z-index:100;
+      display:flex;align-items:center;justify-content:center;padding:20px;
+    }
+    .modal{
+      width:min(620px,100%);background:#fff;border-radius:18px;
+      box-shadow:0 25px 70px rgba(0,0,0,.20);max-height:90vh;overflow:auto;
+    }
+    .modal-head{
+      padding:20px 22px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .modal-head h3{font-size:17px}
+    .close-btn{border:0;background:transparent;font-size:24px;color:var(--muted)}
+    .modal-body{padding:22px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+    .full{grid-column:1/-1}
+    .modal-foot{
+      padding:16px 22px;border-top:1px solid var(--border);
+      display:flex;justify-content:flex-end;gap:9px;
+    }
+    .secondary-btn,.danger-btn{
+      border:1px solid var(--border);background:#fff;border-radius:10px;
+      padding:10px 15px;font-weight:700;
+    }
+    .secondary-btn:hover{background:#f8fafc}
+    .save-btn{
+      border:0;background:var(--navy);color:#fff;border-radius:10px;
+      padding:10px 18px;font-weight:700;
+    }
+    .save-btn:hover{background:var(--navy-2)}
+    .danger-btn{color:var(--danger);border-color:#ffd5d5}
+
+    /* TOAST */
+    #toast{
+      position:fixed;right:22px;bottom:22px;z-index:200;
+      background:var(--navy);color:#fff;padding:13px 16px;border-radius:11px;
+      box-shadow:var(--shadow);font-size:12px;max-width:360px;
+      transform:translateY(20px);opacity:0;pointer-events:none;transition:.25s;
+    }
+    #toast.show{transform:translateY(0);opacity:1}
+    #toast.error{background:#8b2020}
+
+    .mobile-menu{display:none}
+
+    @media(max-width:1050px){
+      .stats{grid-template-columns:repeat(2,1fr)}
+      .search{width:210px}
+    }
+    @media(max-width:760px){
+      .sidebar{
+        transform:translateX(-100%);transition:.25s;
+      }
+      .sidebar.open{transform:translateX(0)}
+      .main{margin-left:0;width:100%}
+      .mobile-menu{display:block}
+      .topbar{padding:0 15px;height:66px}
+      .top-title h2{font-size:16px}
+      .top-title p{display:none}
+      .search{display:none}
+      .content{padding:18px 15px 30px}
+      .stats{grid-template-columns:1fr 1fr;gap:10px}
+      .stat{padding:14px}
+      .stat-value{font-size:19px}
+      .stat-icon{width:35px;height:35px}
+      .section-head{align-items:flex-start}
+      .add-btn{padding:9px 12px;font-size:11px}
+      .form-grid{grid-template-columns:1fr}
+      .full{grid-column:auto}
+      .login-card{padding:28px 22px}
+    }
+    @media(max-width:430px){
+      .stats{grid-template-columns:1fr}
+      .stat{display:flex}
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ================= LOGIN ================= -->
+  <section id="loginScreen">
+    <div class="login-card">
+      <div class="login-brand">
+        <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
+        <h1>Axentra Order Manager</h1>
+        <p>Kelola pesanan Anda secara profesional</p>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">Email Admin</label>
+          <input id="loginEmail" type="email" placeholder="Masukkan email admin" autocomplete="email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <div class="input-wrap">
+            <input id="loginPassword" type="password" placeholder="Masukkan password" autocomplete="current-password" required>
+            <button type="button" class="toggle-password" id="togglePassword" aria-label="Tampilkan password">👁</button>
+          </div>
+        </div>
+
+        <button class="primary-btn" type="submit" id="loginBtn">Masuk ke Dashboard</button>
+      </form>
+
+      <div class="login-note">
+        Sistem privat untuk pengelolaan order.<br>
+        Data tersimpan secara online melalui Supabase.
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= APP ================= -->
+  <section id="app" class="hidden">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
+        <div>
+          <strong>Axentra<br>Order Manager</strong>
+          <small>ORDER MANAGEMENT</small>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="active" data-page="dashboard">
+          <span class="nav-icon">▦</span> Dashboard
+        </button>
+        <button data-page="orders">
+          <span class="nav-icon">▤</span> Semua Order
+        </button>
+        <button id="navAddOrder">
+          <span class="nav-icon">＋</span> Tambah Order
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="user-mini">
+          <strong id="sidebarEmail">Admin</strong>
+          <span>Administrator</span>
+        </div>
+        <button class="logout-btn" id="logoutBtn">↪ Keluar</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-title">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="icon-btn mobile-menu" id="mobileMenu">☰</button>
+            <div>
+              <h2 id="pageTitle">Dashboard</h2>
+              <p>Kelola pesanan, deadline, pembayaran, dan progres pekerjaan.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <div class="search">
+            <span>⌕</span>
+            <input id="searchInput" type="search" placeholder="Cari order atau client...">
+          </div>
+          <button class="icon-btn" id="refreshBtn" title="Muat ulang">↻</button>
+        </div>
+      </header>
+
+      <div class="content">
+
+        <div class="stats">
+          <div class="stat">
+            <div>
+              <div class="stat-label">TOTAL ORDER</div>
+              <div class="stat-value" id="totalOrder">0</div>
+            </div>
+            <div class="stat-icon">▤</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <div class="stat-label">TOTAL PENDAPATAN</div>
+              <div class="stat-value" id="totalRevenue">Rp0</div>
+            </div>
+            <div class="stat-icon">Rp</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <div class="stat-label">ORDER BERJALAN</div>
+              <div class="stat-value" id="activeOrder">0</div>
+            </div>
+            <div class="stat-icon">◷</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <div class="stat-label">ORDER SELESAI</div>
+              <div class="stat-value" id="completedOrder">0</div>
+            </div>
+            <div class="stat-icon">✓</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div>
+            <h3 id="sectionTitle">Daftar Order</h3>
+            <p id="sectionDescription">Semua pesanan yang tersimpan di sistem.</p>
+          </div>
+          <button class="add-btn" id="addOrderBtn">＋ Tambah Order</button>
+        </div>
+
+        <div class="panel">
+          <div class="filterbar">
+            <select id="statusFilter">
+              <option value="">Semua Status</option>
+              <option value="Belum Selesai">Belum Selesai</option>
+              <option value="Selesai">Selesai</option>
+            </select>
+
+            <select id="paymentFilter">
+              <option value="">Semua Pembayaran</option>
+              <option value="Belum Bayar">Belum Bayar</option>
+              <option value="Sudah Bayar">Sudah Bayar</option>
+            </select>
+
+            <select id="deadlineFilter">
+              <option value="">Semua Deadline</option>
+              <option value="today">Jatuh Tempo Hari Ini</option>
+              <option value="upcoming">Akan Jatuh Tempo</option>
+              <option value="overdue">Terlambat</option>
+            </select>
+
+            <span class="filter-count" id="filterCount">0 order</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Client</th>
+                  <th>Deadline</th>
+                  <th>Harga</th>
+                  <th>Pembayaran</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="orderBody"></tbody>
+            </table>
+          </div>
+
+          <div id="emptyState" class="empty hidden">
+            <div class="empty-icon">▤</div>
+            <h4>Belum ada order</h4>
+            <p>Tambahkan order pertama Anda untuk mulai menggunakan Order Manager.</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </section>
+
+  <!-- ================= ORDER MODAL ================= -->
+  <div class="modal-backdrop hidden" id="orderModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle">Tambah Order</h3>
+        <button class="close-btn" id="closeModal" type="button">×</button>
+      </div>
+
+      <form id="orderForm">
+        <div class="modal-body">
+          <input type="hidden" id="orderId">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="namaTugas">Nama Tugas / Pekerjaan *</label>
+              <input id="namaTugas" type="text" placeholder="Contoh: Desain Website" required>
+            </div>
+
+            <div class="form-group">
+              <label for="client">Nama Client / Pemesan *</label>
+              <input id="client" type="text" placeholder="Nama client" required>
+            </div>
+
+            <div class="form-group">
+              <label for="deadline">Deadline *</label>
+              <input id="deadline" type="datetime-local" required>
+            </div>
+
+            <div class="form-group">
+              <label for="harga">Harga (Rp) *</label>
+              <input id="harga" type="number" min="0" step="1000" placeholder="500000" required>
+            </div>
+
+            <div class="form-group">
+              <label for="pembayaran">Pembayaran</label>
+              <select id="pembayaran">
+                <option value="Belum Bayar">Belum Bayar</option>
+                <option value="Sudah Bayar">Sudah Bayar</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status">
+                <option value="Belum Selesai">Belum Selesai</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+            </div>
+
+            <div class="form-group full">
+              <label for="keterangan">Keterangan</label>
+              <textarea id="keterangan" placeholder="Catatan tambahan mengenai order..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button class="secondary-btn" type="button" id="cancelModal">Batal</button>
+          <button class="save-btn" type="submit" id="saveOrderBtn">Simpan Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    /* =========================================================
+       SUPABASE CONFIGURATION
+       ========================================================= */
+    const SUPABASE_URL = "https://wapfwszrsngnjqgbrlfz.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qsKfIoHTtgV-D-8mvL3NKg_FcBiC-e5";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    /* =========================================================
+       STATE
+       ========================================================= */
+    let orders = [];
+    let editingId = null;
+
+    /* =========================================================
+       ELEMENTS
+       ========================================================= */
+    const loginScreen = document.getElementById("loginScreen");
+    const app = document.getElementById("app");
+    const loginForm = document.getElementById("loginForm");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const togglePassword = document.getElementById("togglePassword");
+
+    const sidebarEmail = document.getElementById("sidebarEmail");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const mobileMenu = document.getElementById("mobileMenu");
+    const sidebar = document.getElementById("sidebar");
+
+    const orderModal = document.getElementById("orderModal");
+    const orderForm = document.getElementById("orderForm");
+    const modalTitle = document.getElementById("modalTitle");
+    const closeModal = document.getElementById("closeModal");
+    const cancelModal = document.getElementById("cancelModal");
+    const addOrderBtn = document.getElementById("addOrderBtn");
+    const navAddOrder = document.getElementById("navAddOrder");
+
+    const orderId = document.getElementById("orderId");
+    const namaTugas = document.getElementById("namaTugas");
+    const client = document.getElementById("client");
+    const deadline = document.getElementById("deadline");
+    const harga = document.getElementById("harga");
+    const pembayaran = document.getElementById("pembayaran");
+    const status = document.getElementById("status");
+    const keterangan = document.getElementById("keterangan");
+
+    const orderBody = document.getElementById("orderBody");
+    const emptyState = document.getElementById("emptyState");
+    const searchInput = document.getElementById("searchInput");
+    const statusFilter = document.getElementById("statusFilter");
+    const paymentFilter = document.getElementById("paymentFilter");
+    const deadlineFilter = document.getElementById("deadlineFilter");
+    const filterCount = document.getElementById("filterCount");
+
+    /* =========================================================
+       HELPERS
+       ========================================================= */
+    function showToast(message, error = false){
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.className = error ? "show error" : "show";
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => {
+        toast.className = "";
+      }, 3000);
+    }
+
+    function rupiah(value){
+      return new Intl.NumberFormat("id-ID", {
+        style:"currency",
+        currency:"IDR",
+        maximumFractionDigits:0
+      }).format(Number(value || 0));
+    }
+
+    function formatDeadline(value){
+      if(!value) return "-";
+      const date = new Date(value);
+      return new Intl.DateTimeFormat("id-ID", {
+        day:"2-digit",
+        month:"long",
+        year:"numeric",
+        hour:"2-digit",
+        minute:"2-digit"
+      }).format(date);
+    }
+
+    function toLocalInputValue(value){
+      if(!value) return "";
+      const d = new Date(value);
+      const pad = n => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function deadlineClass(value, currentStatus){
+      if(currentStatus === "Selesai") return "success";
+      const now = new Date();
+      const d = new Date(value);
+      const today = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+      const target = new Date(d.getFullYear(),d.getMonth(),d.getDate());
+
+      if(d < now) return "danger";
+      if(target.getTime() === today.getTime()) return "warning";
+      return "info";
+    }
+
+    function deadlineLabel(value, currentStatus){
+      if(currentStatus === "Selesai") return "Selesai";
+      const d = new Date(value);
+      const now = new Date();
+
+      if(d < now) return "Terlambat";
+      const t1 = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+      const t2 = new Date(d.getFullYear(),d.getMonth(),d.getDate());
+
+      if(t1.getTime() === t2.getTime()) return "Hari ini";
+      return "Mendatang";
+    }
+
+    /* =========================================================
+       AUTH
+       ========================================================= */
+    async function checkSession(){
+      const { data, error } = await supabaseClient.auth.getSession();
+
+      if(error){
+        console.error(error);
+        showLogin();
+        return;
+      }
+
+      if(data.session){
+        showApp(data.session.user);
+      }else{
+        showLogin();
+      }
+    }
+
+    function showLogin(){
+      loginScreen.classList.remove("hidden");
+      app.classList.add("hidden");
+    }
+
+    async function showApp(user){
+      loginScreen.classList.add("hidden");
+      app.classList.remove("hidden");
+      sidebarEmail.textContent = user.email || "Admin";
+      await loadOrders();
+    }
+
+    loginForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Memproses...";
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: loginEmail.value.trim(),
+        password: loginPassword.value
+      });
+
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Masuk ke Dashboard";
+
+      if(error){
+        showToast("Login gagal: " + error.message, true);
+        return;
+      }
+
+      loginPassword.value = "";
+      showToast("Login berhasil.");
+      await showApp(data.user);
+    });
+
+    logoutBtn.addEventListener("click", async ()=>{
+      const { error } = await supabaseClient.auth.signOut();
+      if(error){
+        showToast("Gagal keluar: " + error.message, true);
+        return;
+      }
+      orders = [];
+      showLogin();
+      showToast("Anda sudah keluar.");
+    });
+
+    supabaseClient.auth.onAuthStateChange((event, session)=>{
+      if(event === "SIGNED_OUT"){
+        showLogin();
+      }
+    });
+
+    togglePassword.addEventListener("click", ()=>{
+      const isPassword = loginPassword.type === "password";
+      loginPassword.type = isPassword ? "text" : "password";
+      togglePassword.textContent = isPassword ? "🙈" : "👁";
+    });
+
+    /* =========================================================
+       DATABASE - READ
+       ========================================================= */
+    async function loadOrders(){
+      orderBody.innerHTML = `
+        <tr><td colspan="7" style="text-align:center;padding:35px;color:#718096">
+          Memuat data order...
+        </td></tr>
+      `;
+
+      const { data, error } = await supabaseClient
+        .from("orders")
+        .select("*")
+        .order("deadline", { ascending:true });
+
+      if(error){
+        console.error(error);
+        showToast("Gagal mengambil data order: " + error.message, true);
+        orders = [];
+        renderOrders();
+        return;
+      }
+
+      orders = data || [];
+      renderOrders();
+      updateStats();
+    }
+
+    /* =========================================================
+       DATABASE - CREATE / UPDATE
+       ========================================================= */
+    orderForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+
+      const payload = {
+        nama_tugas: namaTugas.value.trim(),
+        client: client.value.trim(),
+        deadline: new Date(deadline.value).toISOString(),
+        harga: Number(harga.value || 0),
+        pembayaran: pembayaran.value,
+        status: status.value,
+        keterangan: keterangan.value.trim()
+      };
+
+      const saveBtn = document.getElementById("saveOrderBtn");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Menyimpan...";
+
+      let result;
+
+      if(editingId){
+        result = await supabaseClient
+          .from("orders")
+          .update(payload)
+          .eq("id", editingId);
+      }else{
+        result = await supabaseClient
+          .from("orders")
+          .insert(payload);
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Simpan Order";
+
+      if(result.error){
+        console.error(result.error);
+        showToast("Gagal menyimpan: " + result.error.message, true);
+        return;
+      }
+
+      closeOrderModal();
+      showToast(editingId ? "Order berhasil diperbarui." : "Order berhasil ditambahkan.");
+      await loadOrders();
+    });
+
+    /* =========================================================
+       DATABASE - DELETE
+       ========================================================= */
+    async function deleteOrder(id){
+      const target = orders.find(o => String(o.id) === String(id));
+      if(!target) return;
+
+      const confirmed = confirm(
+        `Hapus order "${target.nama_tugas}" dari ${target.client}?`
+      );
+
+      if(!confirmed) return;
+
+      const { error } = await supabaseClient
+        .from("orders")
+        .delete()
+        .eq("id", id);
+
+      if(error){
+        console.error(error);
+        showToast("Gagal menghapus: " + error.message, true);
+        return;
+      }
+
+      showToast("Order berhasil dihapus.");
+      await loadOrders();
+    }
+
+    /* =========================================================
+       RENDER
+       ========================================================= */
+    function getFilteredOrders(){
+      const search = searchInput.value.trim().toLowerCase();
+      const sf = statusFilter.value;
+      const pf = paymentFilter.value;
+      const df = deadlineFilter.value;
+      const now = new Date();
+
+      return orders.filter(o=>{
+        const matchesSearch =
+          !search ||
+          (o.nama_tugas || "").toLowerCase().includes(search) ||
+          (o.client || "").toLowerCase().includes(search) ||
+          (o.keterangan || "").toLowerCase().includes(search);
+
+        const matchesStatus = !sf || o.status === sf;
+        const matchesPayment = !pf || o.pembayaran === pf;
+
+        let matchesDeadline = true;
+        if(df === "today"){
+          const d = new Date(o.deadline);
+          matchesDeadline =
+            d.getFullYear() === now.getFullYear() &&
+            d.getMonth() === now.getMonth() &&
+            d.getDate() === now.getDate();
+        }else if(df === "upcoming"){
+          matchesDeadline = new Date(o.deadline) >= now;
+        }else if(df === "overdue"){
+          matchesDeadline = new Date(o.deadline) < now && o.status !== "Selesai";
+        }
+
+        return matchesSearch && matchesStatus && matchesPayment && matchesDeadline;
+      });
+    }
+
+    function renderOrders(){
+      const filtered = getFilteredOrders();
+      filterCount.textContent = `${filtered.length} order`;
+
+      if(filtered.length === 0){
+        orderBody.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+
+      orderBody.innerHTML = filtered.map(o=>{
+        const dClass = deadlineClass(o.deadline, o.status);
+        const dLabel = deadlineLabel(o.deadline, o.status);
+
+        const paymentClass = o.pembayaran === "Sudah Bayar" ? "success" : "warning";
+        const statusClass = o.status === "Selesai" ? "success" : "info";
+
+        return `
+          <tr>
+            <td>
+              <strong>${escapeHtml(o.nama_tugas || "-")}</strong>
+              ${o.keterangan ? `<div class="muted" style="margin-top:4px">${escapeHtml(o.keterangan).slice(0,55)}${o.keterangan.length>55?"…":""}</div>` : ""}
+            </td>
+            <td>${escapeHtml(o.client || "-")}</td>
+            <td>
+              <div>${formatDeadline(o.deadline)}</div>
+              <span class="badge ${dClass}" style="margin-top:5px">${dLabel}</span>
+            </td>
+            <td class="price">${rupiah(o.harga)}</td>
+            <td><span class="badge ${paymentClass}">${escapeHtml(o.pembayaran || "-")}</span></td>
+            <td><span class="badge ${statusClass}">${escapeHtml(o.status || "-")}</span></td>
+            <td>
+              <div class="actions">
+                <button class="action-btn edit" title="Edit" onclick="editOrder(${Number(o.id)})">✎</button>
+                <button class="action-btn delete" title="Hapus" onclick="deleteOrder(${Number(o.id)})">⌫</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function updateStats(){
+      const total = orders.length;
+      const revenue = orders.reduce((sum,o)=>sum + Number(o.harga || 0),0);
+      const active = orders.filter(o=>o.status === "Belum Selesai").length;
+      const completed = orders.filter(o=>o.status === "Selesai").length;
+
+      document.getElementById("totalOrder").textContent = total;
+      document.getElementById("totalRevenue").textContent = rupiah(revenue);
+      document.getElementById("activeOrder").textContent = active;
+      document.getElementById("completedOrder").textContent = completed;
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    /* =========================================================
+       MODAL
+       ========================================================= */
+    function openNewOrder(){
+      editingId = null;
+      orderForm.reset();
+      orderId.value = "";
+      modalTitle.textContent = "Tambah Order";
+      pembayaran.value = "Belum Bayar";
+      status.value = "Belum Selesai";
+      orderModal.classList.remove("hidden");
+      namaTugas.focus();
+    }
+
+    function editOrder(id){
+      const o = orders.find(x => String(x.id) === String(id));
+      if(!o) return;
+
+      editingId = o.id;
+      orderId.value = o.id;
+      namaTugas.value = o.nama_tugas || "";
+      client.value = o.client || "";
+      deadline.value = toLocalInputValue(o.deadline);
+      harga.value = o.harga || 0;
+      pembayaran.value = o.pembayaran || "Belum Bayar";
+      status.value = o.status || "Belum Selesai";
+      keterangan.value = o.keterangan || "";
+
+      modalTitle.textContent = "Edit Order";
+      orderModal.classList.remove("hidden");
+    }
+
+    function closeOrderModal(){
+      orderModal.classList.add("hidden");
+      orderForm.reset();
+      editingId = null;
+    }
+
+    addOrderBtn.addEventListener("click", openNewOrder);
+    navAddOrder.addEventListener("click", ()=>{
+      openNewOrder();
+      sidebar.classList.remove("open");
+    });
+    closeModal.addEventListener("click", closeOrderModal);
+    cancelModal.addEventListener("click", closeOrderModal);
+
+    orderModal.addEventListener("click", e=>{
+      if(e.target === orderModal) closeOrderModal();
+    });
+
+    /* =========================================================
+       FILTER / SEARCH
+       ========================================================= */
+    [searchInput,statusFilter,paymentFilter,deadlineFilter].forEach(el=>{
+      el.addEventListener("input", renderOrders);
+      el.addEventListener("change", renderOrders);
+    });
+
+    refreshBtn.addEventListener("click", loadOrders);
+
+    /* =========================================================
+       NAVIGATION
+       ========================================================= */
+    document.querySelectorAll(".nav button[data-page]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+        btn.classList.add("active");
+
+        const page = btn.dataset.page;
+        if(page === "dashboard"){
+          document.getElementById("pageTitle").textContent = "Dashboard";
+          document.getElementById("sectionTitle").textContent = "Daftar Order";
+          document.getElementById("sectionDescription").textContent = "Semua pesanan yang tersimpan di sistem.";
+        }else{
+          document.getElementById("pageTitle").textContent = "Semua Order";
+          document.getElementById("sectionTitle").textContent = "Semua Order";
+          document.getElementById("sectionDescription").textContent = "Kelola seluruh pesanan Anda.";
+        }
+
+        sidebar.classList.remove("open");
+      });
+    });
+
+    mobileMenu.addEventListener("click", ()=>{
+      sidebar.classList.toggle("open");
+    });
+
+    /* =========================================================
+       START
+       ========================================================= */
+    checkSession();
+  </script>
+</body>
+</html>
