@@ -365,6 +365,9 @@
         <button id="navAddOrder">
           <span class="nav-icon">＋</span> Tambah Order
         </button>
+        <button id="navReport">
+  <span class="nav-icon">📊</span> Laporan
+</button>
       </nav>
 
       <div class="sidebar-bottom">
@@ -490,6 +493,75 @@
         </div>
 
       </div>
+      <!-- ================= LAPORAN ================= -->
+<div id="reportPage" class="hidden">
+
+  <div class="section-head">
+    <div>
+      <h3>Laporan Bulanan</h3>
+      <p>Laporan order berdasarkan tanggal deadline.</p>
+    </div>
+  </div>
+
+  <!-- FILTER LAPORAN -->
+  <div class="panel" style="margin-bottom:20px;">
+    <div style="padding:20px;">
+
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="reportMonth">Bulan</label>
+
+          <select id="reportMonth">
+            <option value="0">Januari</option>
+            <option value="1">Februari</option>
+            <option value="2">Maret</option>
+            <option value="3">April</option>
+            <option value="4">Mei</option>
+            <option value="5">Juni</option>
+            <option value="6">Juli</option>
+            <option value="7">Agustus</option>
+            <option value="8">September</option>
+            <option value="9">Oktober</option>
+            <option value="10">November</option>
+            <option value="11">Desember</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="reportYear">Tahun</label>
+
+          <select id="reportYear">
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JUDUL LAPORAN -->
+  <div class="panel">
+    <div style="padding:20px;">
+
+      <h3 id="reportTitle">
+        Laporan Oktober 2026
+      </h3>
+
+      <p
+        id="reportDescription"
+        style="margin-top:5px;color:var(--muted);font-size:12px;"
+      >
+        Data order berdasarkan tanggal deadline.
+      </p>
+
+    </div>
+  </div>
+
+</div>
     </main>
   </section>
 

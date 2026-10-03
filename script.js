@@ -1492,7 +1492,144 @@ mobileMenu.addEventListener(
 /* =========================================================
    37. NAVIGATION
    ========================================================= */
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
 
+
+/* =========================================================
+   LAPORAN
+   ========================================================= */
+
+const navReport = document.getElementById("navReport");
+const reportPage = document.getElementById("reportPage");
+
+const reportMonth = document.getElementById("reportMonth");
+const reportYear = document.getElementById("reportYear");
+const reportTitle = document.getElementById("reportTitle");
+
+
+/* TOMBOL LAPORAN */
+
+if (navReport) {
+
+  navReport.addEventListener("click", function () {
+
+    /* Aktifkan menu Laporan */
+
+    document.querySelectorAll(".nav button").forEach(function (button) {
+      button.classList.remove("active");
+    });
+
+    navReport.classList.add("active");
+
+
+    /* Sembunyikan isi Dashboard */
+
+    const content = document.querySelector(".content");
+
+    if (content) {
+
+      Array.from(content.children).forEach(function (element) {
+
+        if (element !== reportPage) {
+          element.classList.add("hidden");
+        }
+
+      });
+
+    }
+
+
+    /* Tampilkan halaman Laporan */
+
+    if (reportPage) {
+      reportPage.classList.remove("hidden");
+    }
+
+
+    /* Ubah judul bagian atas */
+
+    document.getElementById("pageTitle").textContent = "Laporan";
+
+
+    /* Tutup sidebar pada HP */
+
+    sidebar.classList.remove("open");
+
+
+    /* Tampilkan laporan */
+
+    renderReport();
+
+  });
+
+}
+
+
+/* =========================================================
+   FUNGSI RENDER LAPORAN
+   ========================================================= */
+
+function renderReport() {
+
+  if (!reportMonth || !reportYear || !reportTitle) {
+    return;
+  }
+
+
+  const month = Number(reportMonth.value);
+  const year = Number(reportYear.value);
+
+
+  const monthNames = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember"
+  ];
+
+
+  reportTitle.textContent =
+    "Laporan " + monthNames[month] + " " + year;
+
+}
+
+
+/* =========================================================
+   FILTER BULAN DAN TAHUN
+   ========================================================= */
+
+if (reportMonth) {
+
+  reportMonth.addEventListener("change", function () {
+    renderReport();
+  });
+
+}
+
+
+if (reportYear) {
+
+  reportYear.addEventListener("change", function () {
+    renderReport();
+  });
+
+}
+
+
+
+/* KODE NAVIGASI LAMA ANDA */
+
+document.querySelectorAll(".nav button[data-page]").forEach(btn=>{
 document
   .querySelectorAll(
     ".nav button[data-page]"
