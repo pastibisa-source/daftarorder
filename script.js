@@ -97,6 +97,7 @@ function showToast(message, error = false) {
   window.toastTimer = setTimeout(() => {
     toast.className = "";
   }, 3000);
+
 }
 
 
@@ -128,14 +129,11 @@ function formatDeadline(value) {
   const date = new Date(value);
 
   return new Intl.DateTimeFormat("id-ID", {
-
     day: "2-digit",
     month: "long",
     year: "numeric",
-
     hour: "2-digit",
     minute: "2-digit"
-
   }).format(date);
 
 }
@@ -568,42 +566,42 @@ orderForm.addEventListener(
     }
 
 
-const payload = {
-  nama_tugas:
-    namaTugas.value.trim(),
+    const payload = {
 
-  client:
-    client.value.trim(),
+      nama_tugas:
+        namaTugas.value.trim(),
 
-  deadline:
-    new Date(
-      deadline.value
-    ).toISOString(),
+      client:
+        client.value.trim(),
 
-  harga:
-    Number(
-      harga.value || 0
-    ),
+      deadline:
+        new Date(
+          deadline.value
+        ).toISOString(),
 
-  dp:
-    Number(
-      dp.value || 0
-    ),
+      harga:
+        Number(
+          harga.value || 0
+        ),
 
-  pembayaran:
-    pembayaran.value,
+      dp:
+        Number(
+          dp.value || 0
+        ),
 
-  status:
-    status.value,
+      pembayaran:
+        pembayaran.value,
 
-  keterangan:
-    keterangan.value.trim()
-};
+      status:
+        status.value,
 
-const saveBtn =
-  document.getElementById(
-    "saveOrderBtn"
-  );
+      keterangan:
+        keterangan.value.trim()
+
+    };
+
+
+    const saveBtn =
       document.getElementById(
         "saveOrderBtn"
       );
@@ -618,8 +616,6 @@ const saveBtn =
     let result;
 
 
-    /* UPDATE */
-
     if (editingId) {
 
       result =
@@ -631,10 +627,7 @@ const saveBtn =
             editingId
           );
 
-
     }
-
-    /* INSERT */
 
     else {
 
@@ -670,11 +663,13 @@ const saveBtn =
     }
 
 
+    const wasEditing = Boolean(editingId);
+
     closeOrderModal();
 
 
     showToast(
-      editingId
+      wasEditing
         ? "Order berhasil diperbarui."
         : "Order berhasil ditambahkan."
     );
@@ -778,8 +773,6 @@ function getFilteredOrders() {
     function (order) {
 
 
-      /* SEARCH */
-
       const matchesSearch =
 
         !search ||
@@ -797,8 +790,6 @@ function getFilteredOrders() {
           .includes(search);
 
 
-      /* STATUS */
-
       const matchesStatus =
 
         !selectedStatus ||
@@ -807,8 +798,6 @@ function getFilteredOrders() {
         selectedStatus;
 
 
-      /* PAYMENT */
-
       const matchesPayment =
 
         !selectedPayment ||
@@ -816,8 +805,6 @@ function getFilteredOrders() {
         order.pembayaran ===
         selectedPayment;
 
-
-      /* DEADLINE */
 
       let matchesDeadline = true;
 
@@ -831,7 +818,6 @@ function getFilteredOrders() {
           new Date(
             order.deadline
           );
-
 
         matchesDeadline =
 
@@ -1121,34 +1107,38 @@ function updateStats() {
     orders.length;
 
 
-const revenue =
-  orders.reduce(
-    function (
-      totalAmount,
-      order
-    ) {
+  const revenue =
+    orders.reduce(
+      function (
+        totalAmount,
+        order
+      ) {
 
-      // Jika sudah lunas, masukkan harga penuh
-      if (order.pembayaran === "Sudah Bayar") {
+        if (
+          order.pembayaran ===
+          "Sudah Bayar"
+        ) {
+
+          return (
+            totalAmount +
+            Number(
+              order.harga || 0
+            )
+          );
+
+        }
+
+
         return (
           totalAmount +
           Number(
-            order.harga || 0
+            order.dp || 0
           )
         );
-      }
 
-      // Jika belum lunas, hanya DP yang dihitung
-      return (
-        totalAmount +
-        Number(
-          order.dp || 0
-        )
-      );
-
-    },
-    0
-  );
+      },
+      0
+    );
 
 
   const active =
@@ -1209,20 +1199,18 @@ function openNewOrder() {
 
   modalTitle.textContent =
     "Tambah Order";
-dp.value = "";
+
+  dp.value = "";
 
   pembayaran.value =
     "Belum Bayar";
 
-
   status.value =
     "Belum Selesai";
-
 
   orderModal.classList.remove(
     "hidden"
   );
-
 
   namaTugas.focus();
 
@@ -1273,8 +1261,10 @@ function editOrder(id) {
   harga.value =
     order.harga || 0;
 
-dp.value =
-  order.dp || 0;
+
+  dp.value =
+    order.dp || 0;
+
 
   pembayaran.value =
     order.pembayaran ||
@@ -1490,99 +1480,132 @@ mobileMenu.addEventListener(
 
 
 /* =========================================================
-   37. NAVIGATION
+   37. LAPORAN BULANAN
    ========================================================= */
+
+const navReport =
+  document.getElementById(
+    "navReport"
+  );
+
+const reportPage =
+  document.getElementById(
+    "reportPage"
+  );
+
+const reportMonth =
+  document.getElementById(
+    "reportMonth"
+  );
+
+const reportYear =
+  document.getElementById(
+    "reportYear"
+  );
+
+const reportTitle =
+  document.getElementById(
+    "reportTitle"
+  );
+
+
 /* =========================================================
-   NAVIGATION
+   FUNGSI PENDAPATAN DITERIMA
    ========================================================= */
 
+function getReceivedAmount(order) {
 
-/* =========================================================
-   LAPORAN
-   ========================================================= */
+  if (
+    order.pembayaran ===
+    "Sudah Bayar"
+  ) {
 
-const navReport = document.getElementById("navReport");
-const reportPage = document.getElementById("reportPage");
+    return Number(
+      order.harga || 0
+    );
 
-const reportMonth = document.getElementById("reportMonth");
-const reportYear = document.getElementById("reportYear");
-const reportTitle = document.getElementById("reportTitle");
+  }
 
-
-/* TOMBOL LAPORAN */
-
-if (navReport) {
-
-  navReport.addEventListener("click", function () {
-
-    /* Aktifkan menu Laporan */
-
-    document.querySelectorAll(".nav button").forEach(function (button) {
-      button.classList.remove("active");
-    });
-
-    navReport.classList.add("active");
-
-
-    /* Sembunyikan isi Dashboard */
-
-    const content = document.querySelector(".content");
-
-    if (content) {
-
-      Array.from(content.children).forEach(function (element) {
-
-        if (element !== reportPage) {
-          element.classList.add("hidden");
-        }
-
-      });
-
-    }
-
-
-    /* Tampilkan halaman Laporan */
-
-    if (reportPage) {
-      reportPage.classList.remove("hidden");
-    }
-
-
-    /* Ubah judul bagian atas */
-
-    document.getElementById("pageTitle").textContent = "Laporan";
-
-
-    /* Tutup sidebar pada HP */
-
-    sidebar.classList.remove("open");
-
-
-    /* Tampilkan laporan */
-
-    renderReport();
-
-  });
+  return Number(
+    order.dp || 0
+  );
 
 }
 
 
 /* =========================================================
-   FUNGSI RENDER LAPORAN
+   FUNGSI ORDER SESUAI BULAN
+   ========================================================= */
+
+function getReportOrders() {
+
+  if (
+    !reportMonth ||
+    !reportYear
+  ) {
+
+    return [];
+
+  }
+
+
+  const month =
+    Number(
+      reportMonth.value
+    );
+
+  const year =
+    Number(
+      reportYear.value
+    );
+
+
+  return orders.filter(
+    function (order) {
+
+      if (!order.deadline) {
+        return false;
+      }
+
+      const date =
+        new Date(
+          order.deadline
+        );
+
+
+      return (
+        date.getMonth() ===
+        month &&
+
+        date.getFullYear() ===
+        year
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   RENDER LAPORAN
    ========================================================= */
 
 function renderReport() {
 
-  if (!reportMonth || !reportYear || !reportTitle) {
+  if (
+    !reportPage ||
+    !reportMonth ||
+    !reportYear
+  ) {
+
     return;
+
   }
 
 
-  const month = Number(reportMonth.value);
-  const year = Number(reportYear.value);
-
-
   const monthNames = [
+
     "Januari",
     "Februari",
     "Maret",
@@ -1595,41 +1618,1018 @@ function renderReport() {
     "Oktober",
     "November",
     "Desember"
+
   ];
 
 
+  const month =
+    Number(
+      reportMonth.value
+    );
+
+  const year =
+    Number(
+      reportYear.value
+    );
+
+
+  const reportOrders =
+    getReportOrders();
+
+
+  const totalOrder =
+    reportOrders.length;
+
+
+  const selesai =
+    reportOrders.filter(
+      order =>
+        order.status ===
+        "Selesai"
+    ).length;
+
+
+  const berjalan =
+    reportOrders.filter(
+      order =>
+        order.status !==
+        "Selesai"
+    ).length;
+
+
+  const totalNilai =
+    reportOrders.reduce(
+      function (
+        total,
+        order
+      ) {
+
+        return (
+          total +
+          Number(
+            order.harga || 0
+          )
+        );
+
+      },
+      0
+    );
+
+
+  const totalDP =
+    reportOrders.reduce(
+      function (
+        total,
+        order
+      ) {
+
+        return (
+          total +
+          Number(
+            order.dp || 0
+          )
+        );
+
+      },
+      0
+    );
+
+
+  const pendapatan =
+    reportOrders.reduce(
+      function (
+        total,
+        order
+      ) {
+
+        return (
+          total +
+          getReceivedAmount(
+            order
+          )
+        );
+
+      },
+      0
+    );
+
+
+  const sisa =
+    Math.max(
+      0,
+      totalNilai -
+      pendapatan
+    );
+
+
   reportTitle.textContent =
-    "Laporan " + monthNames[month] + " " + year;
+    "Laporan " +
+    monthNames[month] +
+    " " +
+    year;
+
+
+  const description =
+    document.getElementById(
+      "reportDescription"
+    );
+
+  if (description) {
+
+    description.textContent =
+      "Data order berdasarkan tanggal deadline • " +
+      totalOrder +
+      " order";
+
+  }
+
+
+  /* =====================================================
+     BAGIAN SUMMARY
+     ===================================================== */
+
+  let summary =
+    document.getElementById(
+      "reportSummary"
+    );
+
+
+  if (!summary) {
+
+    summary =
+      document.createElement(
+        "div"
+      );
+
+    summary.id =
+      "reportSummary";
+
+    summary.style.display =
+      "grid";
+
+    summary.style.gridTemplateColumns =
+      "repeat(auto-fit,minmax(180px,1fr))";
+
+    summary.style.gap =
+      "14px";
+
+    summary.style.margin =
+      "20px 0";
+
+
+    reportPage.appendChild(
+      summary
+    );
+
+  }
+
+
+  summary.innerHTML = `
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          TOTAL ORDER
+        </div>
+        <div class="stat-value">
+          ${totalOrder}
+        </div>
+      </div>
+      <div class="stat-icon">
+        ▤
+      </div>
+    </div>
+
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          ORDER SELESAI
+        </div>
+        <div class="stat-value">
+          ${selesai}
+        </div>
+      </div>
+      <div class="stat-icon">
+        ✓
+      </div>
+    </div>
+
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          ORDER BERJALAN
+        </div>
+        <div class="stat-value">
+          ${berjalan}
+        </div>
+      </div>
+      <div class="stat-icon">
+        ◷
+      </div>
+    </div>
+
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          TOTAL NILAI ORDER
+        </div>
+        <div class="stat-value"
+             style="font-size:18px">
+          ${rupiah(totalNilai)}
+        </div>
+      </div>
+      <div class="stat-icon">
+        Rp
+      </div>
+    </div>
+
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          TOTAL DP
+        </div>
+        <div class="stat-value"
+             style="font-size:18px">
+          ${rupiah(totalDP)}
+        </div>
+      </div>
+      <div class="stat-icon">
+        Rp
+      </div>
+    </div>
+
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          PENDAPATAN DITERIMA
+        </div>
+        <div class="stat-value"
+             style="font-size:18px">
+          ${rupiah(pendapatan)}
+        </div>
+      </div>
+      <div class="stat-icon">
+        Rp
+      </div>
+    </div>
+
+
+    <div class="stat">
+      <div>
+        <div class="stat-label">
+          SISA PEMBAYARAN
+        </div>
+        <div class="stat-value"
+             style="font-size:18px">
+          ${rupiah(sisa)}
+        </div>
+      </div>
+      <div class="stat-icon">
+        Rp
+      </div>
+    </div>
+
+  `;
+
+
+  /* =====================================================
+     TABEL LAPORAN
+     ===================================================== */
+
+  let reportTable =
+    document.getElementById(
+      "reportTablePanel"
+    );
+
+
+  if (!reportTable) {
+
+    reportTable =
+      document.createElement(
+        "div"
+      );
+
+    reportTable.id =
+      "reportTablePanel";
+
+    reportTable.className =
+      "panel";
+
+    reportPage.appendChild(
+      reportTable
+    );
+
+  }
+
+
+  let rows = "";
+
+
+  reportOrders.forEach(
+    function (order) {
+
+      const hargaOrder =
+        Number(
+          order.harga || 0
+        );
+
+      const dpOrder =
+        Number(
+          order.dp || 0
+        );
+
+      const diterima =
+        getReceivedAmount(
+          order
+        );
+
+      const sisaOrder =
+        Math.max(
+          0,
+          hargaOrder -
+          diterima
+        );
+
+
+      const paymentColor =
+        order.pembayaran ===
+        "Sudah Bayar"
+          ? "success"
+          : "warning";
+
+
+      const statusColor =
+        order.status ===
+        "Selesai"
+          ? "success"
+          : "info";
+
+
+      rows += `
+
+        <tr>
+
+          <td>
+            ${formatDeadline(
+              order.deadline
+            )}
+          </td>
+
+          <td>
+            <strong>
+              ${escapeHtml(
+                order.nama_tugas
+              )}
+            </strong>
+          </td>
+
+          <td>
+            ${escapeHtml(
+              order.client
+            )}
+          </td>
+
+          <td class="price">
+            ${rupiah(
+              hargaOrder
+            )}
+          </td>
+
+          <td>
+            ${rupiah(
+              dpOrder
+            )}
+          </td>
+
+          <td class="price">
+            ${rupiah(
+              diterima
+            )}
+          </td>
+
+          <td class="price">
+            ${rupiah(
+              sisaOrder
+            )}
+          </td>
+
+          <td>
+            <span class="badge ${paymentColor}">
+              ${escapeHtml(
+                order.pembayaran
+              )}
+            </span>
+          </td>
+
+          <td>
+            <span class="badge ${statusColor}">
+              ${escapeHtml(
+                order.status
+              )}
+            </span>
+          </td>
+
+        </tr>
+
+      `;
+
+    }
+  );
+
+
+  if (!rows) {
+
+    rows = `
+
+      <tr>
+
+        <td
+          colspan="9"
+          style="
+            text-align:center;
+            padding:45px;
+            color:#718096;
+          "
+        >
+
+          <div
+            style="
+              font-size:35px;
+              margin-bottom:10px;
+            "
+          >
+            📊
+          </div>
+
+          Belum ada order
+          pada bulan ini.
+
+        </td>
+
+      </tr>
+
+    `;
+
+  }
+
+
+  reportTable.innerHTML = `
+
+    <div
+      style="
+        padding:18px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:10px;
+        flex-wrap:wrap;
+        border-bottom:1px solid var(--border);
+      "
+    >
+
+      <div>
+
+        <h3>
+          Detail Order
+        </h3>
+
+        <p
+          style="
+            margin-top:4px;
+            color:var(--muted);
+            font-size:12px;
+          "
+        >
+          ${monthNames[month]}
+          ${year}
+        </p>
+
+      </div>
+
+
+      <button
+        class="add-btn"
+        type="button"
+        id="printReportBtn"
+      >
+        🖨 Cetak Laporan
+      </button>
+
+    </div>
+
+
+    <div class="table-wrap">
+
+      <table style="min-width:1100px">
+
+        <thead>
+
+          <tr>
+
+            <th>
+              Tanggal Deadline
+            </th>
+
+            <th>
+              Nama Tugas
+            </th>
+
+            <th>
+              Client
+            </th>
+
+            <th>
+              Harga
+            </th>
+
+            <th>
+              DP
+            </th>
+
+            <th>
+              Pendapatan Diterima
+            </th>
+
+            <th>
+              Sisa
+            </th>
+
+            <th>
+              Pembayaran
+            </th>
+
+            <th>
+              Status
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          ${rows}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  `;
+
+
+  const printButton =
+    document.getElementById(
+      "printReportBtn"
+    );
+
+
+  if (printButton) {
+
+    printButton.onclick =
+      function () {
+
+        printReport(
+          monthNames[month],
+          year,
+          reportOrders
+        );
+
+      };
+
+  }
 
 }
 
 
 /* =========================================================
-   FILTER BULAN DAN TAHUN
+   CETAK LAPORAN
+   ========================================================= */
+
+function printReport(
+  monthName,
+  year,
+  reportOrders
+) {
+
+  let rows = "";
+
+
+  reportOrders.forEach(
+    function (order) {
+
+      const hargaOrder =
+        Number(
+          order.harga || 0
+        );
+
+      const diterima =
+        getReceivedAmount(
+          order
+        );
+
+      const sisa =
+        Math.max(
+          0,
+          hargaOrder -
+          diterima
+        );
+
+
+      rows += `
+
+        <tr>
+
+          <td>
+            ${formatDeadline(
+              order.deadline
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              order.nama_tugas
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              order.client
+            )}
+          </td>
+
+          <td>
+            ${rupiah(
+              hargaOrder
+            )}
+          </td>
+
+          <td>
+            ${rupiah(
+              order.dp
+            )}
+          </td>
+
+          <td>
+            ${rupiah(
+              diterima
+            )}
+          </td>
+
+          <td>
+            ${rupiah(
+              sisa
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              order.pembayaran
+            )}
+          </td>
+
+          <td>
+            ${escapeHtml(
+              order.status
+            )}
+          </td>
+
+        </tr>
+
+      `;
+
+    }
+  );
+
+
+  const totalNilai =
+    reportOrders.reduce(
+      (total, order) =>
+        total +
+        Number(
+          order.harga || 0
+        ),
+      0
+    );
+
+
+  const totalDP =
+    reportOrders.reduce(
+      (total, order) =>
+        total +
+        Number(
+          order.dp || 0
+        ),
+      0
+    );
+
+
+  const totalDiterima =
+    reportOrders.reduce(
+      (total, order) =>
+        total +
+        getReceivedAmount(
+          order
+        ),
+      0
+    );
+
+
+  const totalSisa =
+    Math.max(
+      0,
+      totalNilai -
+      totalDiterima
+    );
+
+
+  const printWindow =
+    window.open(
+      "",
+      "_blank"
+    );
+
+
+  if (!printWindow) {
+
+    showToast(
+      "Popup diblokir browser. Izinkan popup untuk mencetak laporan.",
+      true
+    );
+
+    return;
+
+  }
+
+
+  printWindow.document.write(`
+
+    <!DOCTYPE html>
+
+    <html lang="id">
+
+    <head>
+
+      <meta charset="UTF-8">
+
+      <title>
+        Laporan ${monthName} ${year}
+      </title>
+
+      <style>
+
+        body{
+          font-family:Arial,sans-serif;
+          padding:30px;
+          color:#172b4d;
+        }
+
+        h1{
+          margin-bottom:5px;
+        }
+
+        p{
+          color:#666;
+        }
+
+        table{
+          width:100%;
+          border-collapse:collapse;
+          margin-top:25px;
+        }
+
+        th,td{
+          border:1px solid #ccc;
+          padding:8px;
+          font-size:11px;
+          text-align:left;
+        }
+
+        th{
+          background:#f2f5f8;
+        }
+
+        .summary{
+          display:grid;
+          grid-template-columns:
+            repeat(4,1fr);
+          gap:10px;
+          margin-top:20px;
+        }
+
+        .box{
+          border:1px solid #ddd;
+          padding:12px;
+        }
+
+        .label{
+          font-size:10px;
+          color:#777;
+        }
+
+        .value{
+          font-size:16px;
+          font-weight:bold;
+          margin-top:5px;
+        }
+
+        @media print{
+
+          body{
+            padding:10px;
+          }
+
+        }
+
+      </style>
+
+    </head>
+
+
+    <body>
+
+      <h1>
+        Laporan Bulanan
+      </h1>
+
+      <p>
+        Periode:
+        <strong>
+          ${monthName} ${year}
+        </strong>
+      </p>
+
+
+      <div class="summary">
+
+        <div class="box">
+          <div class="label">
+            TOTAL ORDER
+          </div>
+          <div class="value">
+            ${reportOrders.length}
+          </div>
+        </div>
+
+
+        <div class="box">
+          <div class="label">
+            TOTAL NILAI
+          </div>
+          <div class="value">
+            ${rupiah(
+              totalNilai
+            )}
+          </div>
+        </div>
+
+
+        <div class="box">
+          <div class="label">
+            PENDAPATAN DITERIMA
+          </div>
+          <div class="value">
+            ${rupiah(
+              totalDiterima
+            )}
+          </div>
+        </div>
+
+
+        <div class="box">
+          <div class="label">
+            SISA
+          </div>
+          <div class="value">
+            ${rupiah(
+              totalSisa
+            )}
+          </div>
+        </div>
+
+      </div>
+
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>
+              Deadline
+            </th>
+
+            <th>
+              Nama Tugas
+            </th>
+
+            <th>
+              Client
+            </th>
+
+            <th>
+              Harga
+            </th>
+
+            <th>
+              DP
+            </th>
+
+            <th>
+              Diterima
+            </th>
+
+            <th>
+              Sisa
+            </th>
+
+            <th>
+              Pembayaran
+            </th>
+
+            <th>
+              Status
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          ${rows}
+
+        </tbody>
+
+      </table>
+
+
+      <script>
+
+        window.onload =
+          function(){
+
+            window.print();
+
+          };
+
+      <\/script>
+
+    </body>
+
+    </html>
+
+  `);
+
+
+  printWindow.document.close();
+
+}
+
+
+/* =========================================================
+   FILTER LAPORAN
    ========================================================= */
 
 if (reportMonth) {
 
-  reportMonth.addEventListener("change", function () {
-    renderReport();
-  });
+  reportMonth.addEventListener(
+    "change",
+    function () {
+
+      renderReport();
+
+    }
+  );
 
 }
 
 
 if (reportYear) {
 
-  reportYear.addEventListener("change", function () {
-    renderReport();
-  });
+  reportYear.addEventListener(
+    "change",
+    function () {
+
+      renderReport();
+
+    }
+  );
 
 }
 
 
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
 
-/* KODE NAVIGASI LAMA ANDA */
-
-document.querySelectorAll(".nav button[data-page]").forEach(btn=>{
 document
   .querySelectorAll(
     ".nav button[data-page]"
@@ -1640,7 +2640,6 @@ document
       button.addEventListener(
         "click",
         function () {
-
 
           document
             .querySelectorAll(
@@ -1664,6 +2663,42 @@ document
 
           const page =
             button.dataset.page;
+
+
+          /* Tampilkan kembali dashboard/order */
+
+          const content =
+            document.querySelector(
+              ".content"
+            );
+
+
+          if (content) {
+
+            Array.from(
+              content.children
+            ).forEach(
+              function (element) {
+
+                element.classList.remove(
+                  "hidden"
+                );
+
+              }
+            );
+
+          }
+
+
+          /* Sembunyikan halaman laporan */
+
+          if (reportPage) {
+
+            reportPage.classList.add(
+              "hidden"
+            );
+
+          }
 
 
           if (
@@ -1722,6 +2757,87 @@ document
 
     }
   );
+
+
+/* =========================================================
+   NAVIGATION LAPORAN
+   ========================================================= */
+
+if (navReport) {
+
+  navReport.addEventListener(
+    "click",
+    function () {
+
+      document
+        .querySelectorAll(
+          ".nav button"
+        )
+        .forEach(
+          function (item) {
+
+            item.classList.remove(
+              "active"
+            );
+
+          }
+        );
+
+
+      navReport.classList.add(
+        "active"
+      );
+
+
+      const content =
+        document.querySelector(
+          ".content"
+        );
+
+
+      if (content) {
+
+        Array.from(
+          content.children
+        ).forEach(
+          function (element) {
+
+            element.classList.add(
+              "hidden"
+            );
+
+          }
+        );
+
+      }
+
+
+      if (reportPage) {
+
+        reportPage.classList.remove(
+          "hidden"
+        );
+
+      }
+
+
+      document.getElementById(
+        "pageTitle"
+      ).textContent =
+        "Laporan";
+
+
+      sidebar.classList.remove(
+        "open"
+      );
+
+
+      renderReport();
+
+    }
+  );
+
+}
 
 
 /* =========================================================
