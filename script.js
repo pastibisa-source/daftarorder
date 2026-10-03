@@ -62,6 +62,7 @@ const namaTugas = document.getElementById("namaTugas");
 const client = document.getElementById("client");
 const deadline = document.getElementById("deadline");
 const harga = document.getElementById("harga");
+const dp = document.getElementById("dp");
 const pembayaran = document.getElementById("pembayaran");
 const status = document.getElementById("status");
 const keterangan = document.getElementById("keterangan");
@@ -567,37 +568,42 @@ orderForm.addEventListener(
     }
 
 
-    const payload = {
+const payload = {
+  nama_tugas:
+    namaTugas.value.trim(),
 
-      nama_tugas:
-        namaTugas.value.trim(),
+  client:
+    client.value.trim(),
 
-      client:
-        client.value.trim(),
+  deadline:
+    new Date(
+      deadline.value
+    ).toISOString(),
 
-      deadline:
-        new Date(
-          deadline.value
-        ).toISOString(),
+  harga:
+    Number(
+      harga.value || 0
+    ),
 
-      harga:
-        Number(
-          harga.value || 0
-        ),
+  dp:
+    Number(
+      dp.value || 0
+    ),
 
-      pembayaran:
-        pembayaran.value,
+  pembayaran:
+    pembayaran.value,
 
-      status:
-        status.value,
+  status:
+    status.value,
 
-      keterangan:
-        keterangan.value.trim()
+  keterangan:
+    keterangan.value.trim()
+};
 
-    };
-
-
-    const saveBtn =
+const saveBtn =
+  document.getElementById(
+    "saveOrderBtn"
+  );
       document.getElementById(
         "saveOrderBtn"
       );
@@ -1115,23 +1121,34 @@ function updateStats() {
     orders.length;
 
 
-  const revenue =
-    orders.reduce(
-      function (
-        totalAmount,
-        order
-      ) {
+const revenue =
+  orders.reduce(
+    function (
+      totalAmount,
+      order
+    ) {
 
+      // Jika sudah lunas, masukkan harga penuh
+      if (order.pembayaran === "Sudah Bayar") {
         return (
           totalAmount +
           Number(
             order.harga || 0
           )
         );
+      }
 
-      },
-      0
-    );
+      // Jika belum lunas, hanya DP yang dihitung
+      return (
+        totalAmount +
+        Number(
+          order.dp || 0
+        )
+      );
+
+    },
+    0
+  );
 
 
   const active =
@@ -1192,7 +1209,7 @@ function openNewOrder() {
 
   modalTitle.textContent =
     "Tambah Order";
-
+dp.value = "";
 
   pembayaran.value =
     "Belum Bayar";
@@ -1256,6 +1273,8 @@ function editOrder(id) {
   harga.value =
     order.harga || 0;
 
+dp.value =
+  order.dp || 0;
 
   pembayaran.value =
     order.pembayaran ||
