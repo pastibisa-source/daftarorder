@@ -25,6 +25,8 @@ const supabaseClient = window.supabase.createClient(
 
 let orders = [];
 let editingId = null;
+let revenueChart = null;
+let statusChart = null;
 
 
 /* =========================================================
@@ -78,6 +80,14 @@ const deadlineFilter = document.getElementById("deadlineFilter");
 const filterCount = document.getElementById("filterCount");
 
 const toast = document.getElementById("toast");
+
+// Modal keterangan order
+const noteModal = document.getElementById("noteModal");
+const noteModalTitle = document.getElementById("noteModalTitle");
+const noteModalClient = document.getElementById("noteModalClient");
+const noteModalContent = document.getElementById("noteModalContent");
+const closeNoteModal = document.getElementById("closeNoteModal");
+const closeNoteModalBottom = document.getElementById("closeNoteModalBottom");
 
 
 /* =========================================================
@@ -950,23 +960,21 @@ function renderOrders() {
         const note =
           order.keterangan
             ? `
-              <div
-                class="muted"
-                style="margin-top:4px"
+              <button
+                type="button"
+                class="order-note-preview"
+                title="Klik untuk melihat keterangan lengkap"
+                data-note-id="${Number(order.id)}"
+                aria-label="Lihat keterangan ${escapeHtml(order.nama_tugas)}"
               >
-                ${
-                  escapeHtml(
-                    order.keterangan
-                  ).slice(
-                    0,
-                    55
-                  )
+                <span class="order-note-icon">▤</span>
+                <span class="order-note-text">${
+                  escapeHtml(order.keterangan).slice(0, 55)
                 }${
-                  order.keterangan.length > 55
-                    ? "…"
-                    : ""
-                }
-              </div>
+                  order.keterangan.length > 55 ? "…" : ""
+                }</span>
+                <span class="order-note-more">Lihat</span>
+              </button>
             `
             : "";
 
@@ -1461,6 +1469,53 @@ function openNewOrder() {
   namaTugas.focus();
 
 }
+
+
+/* =========================================================
+   MODAL KETERANGAN ORDER
+   ========================================================= */
+
+function openNoteModal(id) {
+  const order = orders.find(item => String(item.id) === String(id));
+  if (!order || !order.keterangan) return;
+
+  noteModalTitle.textContent = order.nama_tugas || "Keterangan Order";
+  noteModalClient.textContent = order.client ? `Client: ${order.client}` : "";
+  noteModalContent.textContent = order.keterangan;
+  noteModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  closeNoteModal.focus();
+}
+
+function closeNoteModalWindow() {
+  noteModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+if (orderBody) {
+  orderBody.addEventListener("click", function(event) {
+    const noteButton = event.target.closest(".order-note-preview");
+    if (!noteButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    openNoteModal(noteButton.dataset.noteId);
+  });
+}
+
+if (closeNoteModal) closeNoteModal.addEventListener("click", closeNoteModalWindow);
+if (closeNoteModalBottom) closeNoteModalBottom.addEventListener("click", closeNoteModalWindow);
+
+if (noteModal) {
+  noteModal.addEventListener("click", function(event) {
+    if (event.target === noteModal) closeNoteModalWindow();
+  });
+}
+
+document.addEventListener("keydown", function(event) {
+  if (event.key === "Escape" && noteModal && !noteModal.classList.contains("hidden")) {
+    closeNoteModalWindow();
+  }
+});
 
 
 /* =========================================================
@@ -2872,138 +2927,70 @@ if (reportYear) {
 }
 
 
+
+/* =========================================================
+   DASHBOARD VISUALS
+   ========================================================= */
+function shortDateLabel(date){
+  return new Intl.DateTimeFormat("id-ID",{day:"2-digit",month:"short"}).format(date);
+}
+function getPaidAmount(order){
+  if(order.pembayaran === "Sudah Bayar") return Number(order.harga||0);
+  return Number(order.dp||0);
+}
+function renderDashboard(){
+  const deadlineList=document.getElementById("dashboardDeadlineList");
+  const latestList=document.getElementById("dashboardLatestList");
+  if(!deadlineList||!latestList) return;
+  const active=orders.filter(o=>o.status!=="Selesai"&&o.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+  const latest=[...orders].sort((a,b)=>new Date(b.created_at||b.deadline||0)-new Date(a.created_at||a.deadline||0));
+  document.getElementById("dashboardDeadlineCount").textContent=active.length;
+  document.getElementById("dashboardLatestCount").textContent=Math.min(latest.length,5);
+  deadlineList.innerHTML=active.slice(0,4).map(o=>{
+    const diff=new Date(o.deadline)-new Date(); const cls=diff<=0?"danger":diff<=72*3600000?"warning":"info";
+    return `<div class="compact-item ${cls}"><div class="compact-main"><div class="compact-title">${escapeHtml(o.nama_tugas)}</div><div class="compact-sub">${escapeHtml(o.client)}</div></div><div class="compact-right"><div class="compact-time">${formatRemainingTime(o.deadline)}</div></div></div>`;
+  }).join("") || `<div class="compact-empty">Tidak ada deadline aktif 🎉</div>`;
+  latestList.innerHTML=latest.slice(0,4).map(o=>`<div class="compact-item"><div class="compact-main"><div class="compact-title">${escapeHtml(o.nama_tugas)}</div><div class="compact-sub">${escapeHtml(o.client)} · ${escapeHtml(o.status||"-")}</div></div><div class="compact-right"><div class="compact-price">${rupiah(o.harga)}</div></div></div>`).join("") || `<div class="compact-empty">Belum ada order.</div>`;
+  renderDashboardCharts();
+}
+function renderDashboardCharts(){
+  if(typeof Chart==="undefined") return;
+  const revenueCanvas=document.getElementById("revenueChart");
+  const statusCanvas=document.getElementById("statusChart");
+  if(!revenueCanvas||!statusCanvas) return;
+  const now=new Date(); const labels=[], values=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(now); d.setHours(0,0,0,0); d.setDate(d.getDate()-i); labels.push(shortDateLabel(d));
+    const next=new Date(d); next.setDate(next.getDate()+1);
+    values.push(orders.filter(o=>{const x=new Date(o.created_at||o.deadline); return x>=d&&x<next;}).reduce((s,o)=>s+getPaidAmount(o),0));
+  }
+  if(revenueChart) revenueChart.destroy();
+  revenueChart=new Chart(revenueCanvas,{type:"line",data:{labels,datasets:[{data:values,borderColor:"#2f80ed",backgroundColor:"rgba(47,128,237,.10)",fill:true,tension:.4,pointRadius:3,pointBackgroundColor:"#2f80ed",borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>rupiah(c.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:"#718096"}},y:{beginAtZero:true,grid:{color:"#edf2f7"},ticks:{font:{size:9},color:"#718096",callback:v=>rupiah(v)}}}}});
+  const completed=orders.filter(o=>o.status==="Selesai").length, active=orders.filter(o=>o.status!=="Selesai").length;
+  document.getElementById("statusTotal").textContent=orders.length; document.getElementById("statusCompleted").textContent=completed; document.getElementById("statusActive").textContent=active;
+  if(statusChart) statusChart.destroy();
+  statusChart=new Chart(statusCanvas,{type:"doughnut",data:{labels:["Selesai","Berjalan"],datasets:[{data:[completed,active],backgroundColor:["#16845b","#2f80ed"],borderWidth:0,hoverOffset:5}]},options:{cutout:"72%",plugins:{legend:{display:false}}}});
+}
+
 /* =========================================================
    NAVIGATION
    ========================================================= */
-
-document
-  .querySelectorAll(
-    ".nav button[data-page]"
-  )
-  .forEach(
-    function (button) {
-
-      button.addEventListener(
-        "click",
-        function () {
-
-          document
-            .querySelectorAll(
-              ".nav button"
-            )
-            .forEach(
-              function (item) {
-
-                item.classList.remove(
-                  "active"
-                );
-
-              }
-            );
-
-
-          button.classList.add(
-            "active"
-          );
-
-
-          const page =
-            button.dataset.page;
-
-
-          /* Tampilkan kembali dashboard/order */
-
-          const content =
-            document.querySelector(
-              ".content"
-            );
-
-
-          if (content) {
-
-            Array.from(
-              content.children
-            ).forEach(
-              function (element) {
-
-                element.classList.remove(
-                  "hidden"
-                );
-
-              }
-            );
-
-          }
-
-
-          /* Sembunyikan halaman laporan */
-
-          if (reportPage) {
-
-            reportPage.classList.add(
-              "hidden"
-            );
-
-          }
-
-
-          if (
-            page ===
-            "dashboard"
-          ) {
-
-            document.getElementById(
-              "pageTitle"
-            ).textContent =
-              "Dashboard";
-
-
-            document.getElementById(
-              "sectionTitle"
-            ).textContent =
-              "Daftar Order";
-
-
-            document.getElementById(
-              "sectionDescription"
-            ).textContent =
-              "Semua pesanan yang tersimpan di sistem.";
-
-          }
-
-
-          else {
-
-            document.getElementById(
-              "pageTitle"
-            ).textContent =
-              "Semua Order";
-
-
-            document.getElementById(
-              "sectionTitle"
-            ).textContent =
-              "Semua Order";
-
-
-            document.getElementById(
-              "sectionDescription"
-            ).textContent =
-              "Kelola seluruh pesanan Anda.";
-
-          }
-
-
-          sidebar.classList.remove(
-            "open"
-          );
-
-        }
-      );
-
-    }
-  );
-
+document.querySelectorAll(".nav button[data-page]").forEach(button=>{
+  button.addEventListener("click",function(){
+    document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+    button.classList.add("active");
+    const page=button.dataset.page;
+    const dashboardPage=document.getElementById("dashboardPage");
+    const ordersPage=document.getElementById("ordersPage");
+    if(reportPage) reportPage.classList.add("hidden");
+    dashboardPage.classList.toggle("hidden",page!=="dashboard");
+    ordersPage.classList.toggle("hidden",page!=="orders");
+    document.getElementById("pageTitle").textContent=page==="dashboard"?"Dashboard":"Semua Order";
+    document.getElementById("pageSubtitle").textContent=page==="dashboard"?"Ringkasan aktivitas dan kondisi order Anda hari ini.":"Kelola, cari, filter, dan perbarui seluruh pesanan.";
+    if(page==="dashboard") renderDashboard();
+    sidebar.classList.remove("open");
+  });
+});
 
 /* =========================================================
    NAVIGATION LAPORAN
@@ -3035,33 +3022,15 @@ if (navReport) {
       );
 
 
-      const content =
-        document.querySelector(
-          ".content"
-        );
+      const dashboardPage = document.getElementById("dashboardPage");
+      const ordersPage = document.getElementById("ordersPage");
+      if (dashboardPage) dashboardPage.classList.add("hidden");
+      if (ordersPage) ordersPage.classList.add("hidden");
+      if (reportPage) reportPage.classList.remove("hidden");
 
 
- if (content) {
-  content.classList.remove("hidden");
-}
-
- if (content) {
-  content.classList.add("hidden");
-}
-
-      if (reportPage) {
-
-        reportPage.classList.remove(
-          "hidden"
-        );
-
-      }
-
-
-      document.getElementById(
-        "pageTitle"
-      ).textContent =
-        "Laporan";
+      document.getElementById("pageTitle").textContent = "Laporan";
+      document.getElementById("pageSubtitle").textContent = "Analisis order dan pendapatan berdasarkan periode.";
 
 
       sidebar.classList.remove(
@@ -3077,6 +3046,9 @@ if (navReport) {
 }
 
 
+
+["dashboardAddBtn","addOrderBtn","navAddOrder"].forEach(id=>{const el=document.getElementById(id);if(el) el.addEventListener("click",openNewOrder);});
+["dashboardDeadlineAll","dashboardLatestAll"].forEach(id=>{const el=document.getElementById(id);if(el) el.addEventListener("click",()=>document.querySelector('.nav button[data-page="orders"]').click());});
 /* =========================================================
    38. START APPLICATION
    ========================================================= */

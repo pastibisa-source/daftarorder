@@ -1,619 +1,85 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Axentra Order Manager</title>
-  <meta name="description" content="Order Manager untuk mengelola pesanan, pembayaran, deadline, dan status pekerjaan.">
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axentra Order Manager</title>
+<meta name="description" content="Order Manager untuk mengelola pesanan, pembayaran, deadline, dan status pekerjaan.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
-
-<style>
-    :root{
-      --navy:#102a43;
-      --navy-2:#173f63;
-      --blue:#2f80ed;
-      --blue-soft:#eaf3ff;
-      --gold:#d5a63a;
-      --gold-soft:#fff7df;
-      --white:#ffffff;
-      --bg:#f4f7fb;
-      --text:#172b4d;
-      --muted:#718096;
-      --border:#e4eaf1;
-      --success:#16845b;
-      --success-soft:#e9f8f1;
-      --warning:#b7791f;
-      --warning-soft:#fff7e6;
-      --danger:#c53030;
-      --danger-soft:#fff0f0;
-      --shadow:0 12px 35px rgba(16,42,67,.08);
-      --radius:16px;
-    }
-
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      min-height:100vh;
-    }
-    button,input,select,textarea{font:inherit}
-    button{cursor:pointer}
-    .hidden{display:none!important}
-
-    /* LOGIN */
-    #loginScreen{
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:24px;
-      background:
-        radial-gradient(circle at 10% 10%,rgba(47,128,237,.10),transparent 30%),
-        radial-gradient(circle at 90% 90%,rgba(213,166,58,.12),transparent 30%),
-        #f7f9fc;
-    }
-    .login-card{
-      width:min(430px,100%);
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius:24px;
-      box-shadow:var(--shadow);
-      padding:38px;
-    }
-    .login-brand{text-align:center;margin-bottom:28px}
-    .login-brand img{
-      width:82px;height:82px;object-fit:contain;margin-bottom:12px;
-    }
-    .login-brand h1{font-size:24px;color:var(--navy)}
-    .login-brand p{color:var(--muted);font-size:13px;margin-top:6px}
-    .form-group{margin-bottom:17px}
-    .form-group label{
-      display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:#34495e;
-    }
-    .input-wrap{position:relative}
-    .input-wrap input{padding-right:46px}
-    input,select,textarea{
-      width:100%;
-      border:1px solid #d7e0ea;
-      border-radius:10px;
-      padding:12px 13px;
-      outline:none;
-      background:#fff;
-      color:var(--text);
-      transition:.2s;
-    }
-    input:focus,select:focus,textarea:focus{
-      border-color:var(--blue);
-      box-shadow:0 0 0 3px rgba(47,128,237,.10);
-    }
-    textarea{resize:vertical;min-height:95px}
-    .toggle-password{
-      position:absolute;right:8px;top:50%;transform:translateY(-50%);
-      border:0;background:transparent;color:var(--muted);padding:7px;
-    }
-    .primary-btn{
-      width:100%;border:0;border-radius:11px;padding:13px 16px;
-      background:var(--navy);color:#fff;font-weight:700;
-      transition:.2s;
-    }
-    .primary-btn:hover{background:var(--navy-2);transform:translateY(-1px)}
-    .login-note{text-align:center;font-size:12px;color:var(--muted);margin-top:18px;line-height:1.6}
-
-    /* APP */
-    #app{min-height:100vh;display:flex}
-    .sidebar{
-      width:250px;background:var(--navy);color:#fff;position:fixed;
-      top:0;bottom:0;left:0;z-index:50;padding:20px 14px;
-      display:flex;flex-direction:column;
-    }
-    .brand{
-      display:flex;align-items:center;gap:11px;padding:8px 10px 25px;
-      border-bottom:1px solid rgba(255,255,255,.12);
-    }
-    .brand img{width:42px;height:42px;object-fit:contain;background:#fff;border-radius:10px}
-    .brand strong{font-size:15px;line-height:1.2}
-    .brand small{display:block;color:#b8c8d8;margin-top:3px;font-size:10px}
-    .nav{margin-top:22px;display:grid;gap:6px}
-    .nav button{
-      border:0;background:transparent;color:#c9d6e3;text-align:left;
-      padding:12px 13px;border-radius:10px;font-weight:600;
-      display:flex;align-items:center;gap:11px;
-    }
-    .nav button:hover,.nav button.active{background:rgba(255,255,255,.10);color:#fff}
-    .nav-icon{width:20px;text-align:center}
-    .sidebar-bottom{margin-top:auto}
-    .user-mini{
-      background:rgba(255,255,255,.07);padding:12px;border-radius:12px;
-      margin-bottom:9px;overflow:hidden;
-    }
-    .user-mini strong{font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .user-mini span{font-size:10px;color:#b8c8d8}
-    .logout-btn{
-      width:100%;border:1px solid rgba(255,255,255,.15);background:transparent;
-      color:#fff;border-radius:10px;padding:10px;font-weight:600;
-    }
-    .logout-btn:hover{background:rgba(255,255,255,.08)}
-
-    .main{margin-left:250px;width:calc(100% - 250px);min-width:0}
-    .topbar{
-      height:74px;background:#fff;border-bottom:1px solid var(--border);
-      display:flex;align-items:center;justify-content:space-between;
-      padding:0 30px;position:sticky;top:0;z-index:30;
-    }
-    .top-title h2{font-size:20px}
-    .top-title p{font-size:12px;color:var(--muted);margin-top:3px}
-    .top-actions{display:flex;align-items:center;gap:10px}
-    .search{
-      width:260px;position:relative;
-    }
-    .search input{padding-left:38px;background:#f8fafc}
-    .search span{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
-    .icon-btn{
-      width:40px;height:40px;border:1px solid var(--border);background:#fff;
-      border-radius:10px;color:var(--muted);
-    }
-    .icon-btn:hover{background:#f7fafc}
-    .content{padding:28px 30px 40px}
-    .section-head{
-      display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px;
-    }
-    .section-head h3{font-size:18px}
-    .section-head p{font-size:12px;color:var(--muted);margin-top:4px}
-    .add-btn{
-      border:0;background:var(--gold);color:#fff;border-radius:10px;
-      padding:11px 16px;font-weight:700;box-shadow:0 5px 14px rgba(213,166,58,.22);
-    }
-    .add-btn:hover{filter:brightness(.96);transform:translateY(-1px)}
-
-    /* STATS */
-    .stats{
-      display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;
-    }
-    .stat{
-      background:#fff;border:1px solid var(--border);border-radius:var(--radius);
-      padding:19px;box-shadow:0 5px 18px rgba(16,42,67,.04);
-      display:flex;justify-content:space-between;gap:10px;
-    }
-    .stat-label{font-size:12px;color:var(--muted);font-weight:600}
-    .stat-value{font-size:24px;font-weight:800;margin-top:8px;color:var(--navy)}
-    .stat-icon{
-      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
-      background:var(--blue-soft);color:var(--blue);font-size:18px;
-    }
-    .stat:nth-child(2) .stat-icon{background:var(--gold-soft);color:var(--gold)}
-    .stat:nth-child(3) .stat-icon{background:var(--warning-soft);color:var(--warning)}
-    .stat:nth-child(4) .stat-icon{background:var(--success-soft);color:var(--success)}
-
-    /* TABLE */
-    .panel{
-      background:#fff;border:1px solid var(--border);border-radius:var(--radius);
-      box-shadow:0 5px 18px rgba(16,42,67,.04);overflow:hidden;
-    }
-    .filterbar{
-      padding:17px;border-bottom:1px solid var(--border);
-      display:flex;flex-wrap:wrap;gap:9px;align-items:center;
-    }
-    .filterbar select{width:auto;min-width:145px;padding:9px 11px}
-    .filter-count{margin-left:auto;color:var(--muted);font-size:12px}
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;min-width:920px}
-    th,td{padding:14px 16px;text-align:left;border-bottom:1px solid #edf1f5;font-size:12px;vertical-align:middle}
-    th{background:#fbfcfe;color:#66788a;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-    tbody tr:hover{background:#fbfdff}
-    td strong{font-size:12px;color:var(--navy)}
-    .muted{color:var(--muted)}
-    .price{font-weight:800;color:var(--navy)}
-    .badge{
-      display:inline-flex;align-items:center;gap:5px;border-radius:999px;
-      padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap;
-    }
-    .badge.success{background:var(--success-soft);color:var(--success)}
-    .badge.warning{background:var(--warning-soft);color:var(--warning)}
-    .badge.danger{background:var(--danger-soft);color:var(--danger)}
-    .badge.info{background:var(--blue-soft);color:var(--blue)}
-    .actions{display:flex;gap:6px}
-    .action-btn{
-      width:31px;height:31px;border:1px solid var(--border);background:#fff;
-      border-radius:8px;font-size:13px;
-    }
-    .action-btn.edit{color:var(--blue)}
-    .action-btn.delete{color:var(--danger)}
-    .action-btn:hover{background:#f7fafc}
-
-    .empty{
-      padding:55px 20px;text-align:center;color:var(--muted)
-    }
-    .empty .empty-icon{font-size:40px;margin-bottom:10px}
-    .empty h4{color:var(--navy);margin-bottom:5px}
-
-    /* MODAL */
-    .modal-backdrop{
-      position:fixed;inset:0;background:rgba(9,24,39,.48);z-index:100;
-      display:flex;align-items:center;justify-content:center;padding:20px;
-    }
-    .modal{
-      width:min(620px,100%);background:#fff;border-radius:18px;
-      box-shadow:0 25px 70px rgba(0,0,0,.20);max-height:90vh;overflow:auto;
-    }
-    .modal-head{
-      padding:20px 22px;border-bottom:1px solid var(--border);
-      display:flex;align-items:center;justify-content:space-between;
-    }
-    .modal-head h3{font-size:17px}
-    .close-btn{border:0;background:transparent;font-size:24px;color:var(--muted)}
-    .modal-body{padding:22px}
-    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-    .full{grid-column:1/-1}
-    .modal-foot{
-      padding:16px 22px;border-top:1px solid var(--border);
-      display:flex;justify-content:flex-end;gap:9px;
-    }
-    .secondary-btn,.danger-btn{
-      border:1px solid var(--border);background:#fff;border-radius:10px;
-      padding:10px 15px;font-weight:700;
-    }
-    .secondary-btn:hover{background:#f8fafc}
-    .save-btn{
-      border:0;background:var(--navy);color:#fff;border-radius:10px;
-      padding:10px 18px;font-weight:700;
-    }
-    .save-btn:hover{background:var(--navy-2)}
-    .danger-btn{color:var(--danger);border-color:#ffd5d5}
-
-    /* TOAST */
-    #toast{
-      position:fixed;right:22px;bottom:22px;z-index:200;
-      background:var(--navy);color:#fff;padding:13px 16px;border-radius:11px;
-      box-shadow:var(--shadow);font-size:12px;max-width:360px;
-      transform:translateY(20px);opacity:0;pointer-events:none;transition:.25s;
-    }
-    #toast.show{transform:translateY(0);opacity:1}
-    #toast.error{background:#8b2020}
-
-    .mobile-menu{display:none}
-
-    @media(max-width:1050px){
-      .stats{grid-template-columns:repeat(2,1fr)}
-      .search{width:210px}
-    }
-    @media(max-width:760px){
-      .sidebar{
-        transform:translateX(-100%);transition:.25s;
-      }
-      .sidebar.open{transform:translateX(0)}
-      .main{margin-left:0;width:100%}
-      .mobile-menu{display:block}
-      .topbar{padding:0 15px;height:66px}
-      .top-title h2{font-size:16px}
-      .top-title p{display:none}
-      .search{display:none}
-      .content{padding:18px 15px 30px}
-      .stats{grid-template-columns:1fr 1fr;gap:10px}
-      .stat{padding:14px}
-      .stat-value{font-size:19px}
-      .stat-icon{width:35px;height:35px}
-      .section-head{align-items:flex-start}
-      .add-btn{padding:9px 12px;font-size:11px}
-      .form-grid{grid-template-columns:1fr}
-      .full{grid-column:auto}
-      .login-card{padding:28px 22px}
-    }
-    @media(max-width:430px){
-      .stats{grid-template-columns:1fr}
-      .stat{display:flex}
-    }
-  </style>
 </head>
-
 <body>
+<section id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">
+      <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
+      <h1>Axentra Order Manager</h1><p>Axentra Prima Aksara Cepat dan Tepat</p>
+    </div>
+    <form id="loginForm">
+      <div class="form-group"><label for="loginEmail">Email Admin</label><input id="loginEmail" type="email" placeholder="Masukkan email admin" autocomplete="email" required></div>
+      <div class="form-group"><label for="loginPassword">Password</label><div class="input-wrap"><input id="loginPassword" type="password" placeholder="Masukkan password" autocomplete="current-password" required><button type="button" class="toggle-password" id="togglePassword">👁</button></div></div>
+      <button class="primary-btn" type="submit" id="loginBtn">Masuk ke Dashboard</button>
+    </form>
+    <div class="login-note">Management Order Axentra Prima Aksara.</div>
+  </div>
+</section>
+<section id="app" class="hidden">
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
+    <div class="brand-text"><strong>Axentra<br>Order Manager</strong><small>ORDER MANAGEMENT</small></div>
+    <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button" title="Minimalkan sidebar">◀</button>
+  </div>
+  <nav class="nav">
+    <button class="active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+    <button data-page="orders"><span class="nav-icon">▤</span><span>Semua Order</span></button>
+    <button id="navAddOrder"><span class="nav-icon">＋</span><span>Tambah Order</span></button>
+    <button id="navReport"><span class="nav-icon">▥</span><span>Laporan</span></button>
+  </nav>
+  <div class="sidebar-bottom"><div class="user-mini"><strong id="sidebarEmail">Admin</strong><span>Administrator</span></div><button class="logout-btn" id="logoutBtn">↪ Keluar</button></div>
+</aside>
+<main class="main">
+<header class="topbar">
+  <div class="top-title"><div class="top-title-inner"><button class="icon-btn mobile-menu" id="mobileMenu">☰</button><div><h2 id="pageTitle">Dashboard</h2><p id="pageSubtitle">Ringkasan aktivitas dan kondisi order Anda hari ini.</p></div></div></div>
+  <div class="top-actions"><div class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="Cari order atau client..."></div><button class="icon-btn" id="refreshBtn" title="Muat ulang">↻</button></div>
+</header>
 
-  <!-- ================= LOGIN ================= -->
-  <section id="loginScreen">
-    <div class="login-card">
-      <div class="login-brand">
-        <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
-        <h1>Axentra Order Manager</h1>
-        <p>Axentra Prima Aksara Cepat dan Tepat</p>
-      </div>
-
-      <form id="loginForm">
-        <div class="form-group">
-          <label for="loginEmail">Email Admin</label>
-          <input id="loginEmail" type="email" placeholder="Masukkan email admin" autocomplete="email" required>
-        </div>
-
-        <div class="form-group">
-          <label for="loginPassword">Password</label>
-          <div class="input-wrap">
-            <input id="loginPassword" type="password" placeholder="Masukkan password" autocomplete="current-password" required>
-            <button type="button" class="toggle-password" id="togglePassword" aria-label="Tampilkan password">👁</button>
-          </div>
-        </div>
-
-        <button class="primary-btn" type="submit" id="loginBtn">Masuk ke Dashboard</button>
-      </form>
-
-      <div class="login-note">
-        Management Order Axentra Prima Aksara.
-      </div>
+<div class="content">
+  <!-- DASHBOARD -->
+  <section id="dashboardPage" class="page-section">
+    <div class="welcome-row"><div><span class="eyebrow">OVERVIEW</span><h1>Dashboard</h1><p>Pantau order, pendapatan, deadline, dan pekerjaan yang perlu diperhatikan.</p></div><button class="add-btn" id="dashboardAddBtn">＋ Tambah Order</button></div>
+    <div class="stats">
+      <div class="stat stat-blue"><div><div class="stat-label">TOTAL ORDER</div><div class="stat-value" id="totalOrder">0</div><div class="stat-meta">Seluruh order tersimpan</div></div><div class="stat-icon">▤</div></div>
+      <div class="stat stat-gold"><div><div class="stat-label">TOTAL PENDAPATAN</div><div class="stat-value" id="totalRevenue">Rp0</div><div class="stat-meta">Pendapatan + DP diterima</div></div><div class="stat-icon">Rp</div></div>
+      <div class="stat stat-orange"><div><div class="stat-label">ORDER BERJALAN</div><div class="stat-value" id="activeOrder">0</div><div class="stat-meta">Masih dalam pengerjaan</div></div><div class="stat-icon">◷</div></div>
+      <div class="stat stat-green"><div><div class="stat-label">ORDER SELESAI</div><div class="stat-value" id="completedOrder">0</div><div class="stat-meta">Sudah diselesaikan</div></div><div class="stat-icon">✓</div></div>
+    </div>
+    <div class="dashboard-grid charts-grid">
+      <section class="panel chart-panel"><div class="panel-head"><div><h3>Pendapatan</h3><p>Tren penerimaan berdasarkan order</p></div><span class="panel-icon blue">↗</span></div><div class="chart-wrap"><canvas id="revenueChart"></canvas></div></section>
+      <section class="panel chart-panel status-chart-panel"><div class="panel-head"><div><h3>Status Order</h3><p>Perbandingan order selesai dan berjalan</p></div><span class="panel-icon gold">◉</span></div><div class="status-chart-body"><div class="donut-wrap"><canvas id="statusChart"></canvas><div class="donut-center"><strong id="statusTotal">0</strong><span>Order</span></div></div><div class="status-legend"><div><i class="legend-dot success"></i><span>Selesai</span><strong id="statusCompleted">0</strong></div><div><i class="legend-dot info"></i><span>Berjalan</span><strong id="statusActive">0</strong></div></div></div></section>
+    </div>
+    <div class="dashboard-grid lower-grid">
+      <section class="panel dashboard-list"><div class="panel-head"><div><h3>🔔 Deadline Terdekat</h3><p>Prioritas pekerjaan yang belum selesai</p></div><span class="count-pill" id="dashboardDeadlineCount">0</span></div><div id="dashboardDeadlineList" class="compact-list"></div><button class="text-link" id="dashboardDeadlineAll">Lihat semua order →</button></section>
+      <section class="panel dashboard-list"><div class="panel-head"><div><h3>🆕 Order Terbaru</h3><p>Order terakhir yang masuk ke sistem</p></div><span class="count-pill blue-pill" id="dashboardLatestCount">0</span></div><div id="dashboardLatestList" class="compact-list"></div><button class="text-link" id="dashboardLatestAll">Lihat semua order →</button></section>
     </div>
   </section>
 
-  <!-- ================= APP ================= -->
-  <section id="app" class="hidden">
-
-    <aside class="sidebar" id="sidebar">
-<div class="brand">
-  <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
-
-  <div class="brand-text">
-    <strong>Axentra<br>Order Manager</strong>
-    <small>ORDER MANAGEMENT</small>
-  </div>
-
-  <button
-    class="sidebar-collapse-btn"
-    id="sidebarCollapseBtn"
-    type="button"
-    title="Minimalkan sidebar"
-  >
-    ◀
-  </button>
-</div>
-
-      <nav class="nav">
-        <button class="active" data-page="dashboard">
-          <span class="nav-icon">▦</span> Dashboard
-        </button>
-        <button data-page="orders">
-          <span class="nav-icon">▤</span> Semua Order
-        </button>
-        <button id="navAddOrder">
-          <span class="nav-icon">＋</span> Tambah Order
-        </button>
-        <button id="navReport">
-  <span class="nav-icon">📊</span> Laporan
-</button>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <div class="user-mini">
-          <strong id="sidebarEmail">Admin</strong>
-          <span>Administrator</span>
-        </div>
-        <button class="logout-btn" id="logoutBtn">↪ Keluar</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div class="top-title">
-          <div style="display:flex;align-items:center;gap:10px">
-            <button class="icon-btn mobile-menu" id="mobileMenu">☰</button>
-            <div>
-              <h2 id="pageTitle">Dashboard</h2>
-              <p>Kelola pesanan, deadline, pembayaran, dan progres pekerjaan.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="top-actions">
-          <div class="search">
-            <span>⌕</span>
-            <input id="searchInput" type="search" placeholder="Cari order atau client...">
-          </div>
-          <button class="icon-btn" id="refreshBtn" title="Muat ulang">↻</button>
-        </div>
-      </header>
-
-      <div class="content">
-
-        <div class="stats">
-          <div class="stat">
-            <div>
-              <div class="stat-label">TOTAL ORDER</div>
-              <div class="stat-value" id="totalOrder">0</div>
-            </div>
-            <div class="stat-icon">▤</div>
-          </div>
-
-          <div class="stat">
-            <div>
-              <div class="stat-label">TOTAL PENDAPATAN</div>
-              <div class="stat-value" id="totalRevenue">Rp0</div>
-            </div>
-            <div class="stat-icon">Rp</div>
-          </div>
-
-          <div class="stat">
-            <div>
-              <div class="stat-label">ORDER BERJALAN</div>
-              <div class="stat-value" id="activeOrder">0</div>
-            </div>
-            <div class="stat-icon">◷</div>
-          </div>
-
-          <div class="stat">
-            <div>
-              <div class="stat-label">ORDER SELESAI</div>
-              <div class="stat-value" id="completedOrder">0</div>
-            </div>
-            <div class="stat-icon">✓</div>
-          </div>
-        </div>
-
-<!-- PENGINGAT DEADLINE -->
-<div class="deadline-panel" id="deadlinePanel">
-
-  <div class="deadline-panel-head">
-
-    <div>
-      <h3>🔔 DAFTAR Deadline</h3>
-    </div>
-
-    <div class="deadline-panel-actions">
-
-      <span
-        id="deadlineAlertCount"
-        class="deadline-count"
-      >0</span>
-
-      <button
-        class="deadline-toggle-btn"
-        id="deadlineToggleBtn"
-        type="button"
-        title="Minimalkan Pengingat Deadline"
-        aria-expanded="true"
-      >▲</button>
-
-    </div>
-
-  </div>
-
-  <div id="deadlineReminderList">
-    <!-- Pengingat deadline akan muncul otomatis di sini -->
-  </div>
-
-</div>
-<div class="section-head">
-  <div>
-    <h3 id="sectionTitle">Daftar Order</h3>
-    <p id="sectionDescription">
-      Semua pesanan yang tersimpan di sistem.
-    </p>
-  </div>
-
-  <button class="add-btn" id="addOrderBtn">
-    ＋ Tambah Order
-  </button>
-</div>
-
-        <div class="panel">
-          <div class="filterbar">
-            <select id="statusFilter">
-              <option value="">Semua Status</option>
-              <option value="Belum Selesai">Belum Selesai</option>
-              <option value="Selesai">Selesai</option>
-            </select>
-
-            <select id="paymentFilter">
-              <option value="">Semua Pembayaran</option>
-              <option value="Belum Bayar">Belum Bayar</option>
-              <option value="Sudah Bayar">Sudah Bayar</option>
-            </select>
-
-            <select id="deadlineFilter">
-              <option value="">Semua Deadline</option>
-              <option value="today">Jatuh Tempo Hari Ini</option>
-              <option value="upcoming">Akan Jatuh Tempo</option>
-              <option value="overdue">Terlambat</option>
-            </select>
-
-            <span class="filter-count" id="filterCount">0 order</span>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Client</th>
-                  <th>Deadline</th>
-                  <th>Harga</th>
-                  <th>Pembayaran</th>
-                  <th>Status</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="orderBody"></tbody>
-            </table>
-          </div>
-
-          <div id="emptyState" class="empty hidden">
-            <div class="empty-icon">▤</div>
-            <h4>Belum ada order</h4>
-            <p>Tambahkan order pertama Anda untuk mulai menggunakan Order Manager.</p>
-          </div>
-        </div>
-
-      </div>
-      <!-- ================= LAPORAN ================= -->
-<div id="reportPage" class="hidden">
-
-  <div class="section-head">
-    <div>
-      <h3>Laporan Bulanan</h3>
-      <p>Laporan order berdasarkan tanggal deadline.</p>
-    </div>
-  </div>
-
-  <!-- FILTER LAPORAN -->
-  <div class="panel" style="margin-bottom:20px;">
-    <div style="padding:20px;">
-
-      <div class="form-grid">
-
-        <div class="form-group">
-          <label for="reportMonth">Bulan</label>
-
-          <select id="reportMonth">
-            <option value="0">Januari</option>
-            <option value="1">Februari</option>
-            <option value="2">Maret</option>
-            <option value="3">April</option>
-            <option value="4">Mei</option>
-            <option value="5">Juni</option>
-            <option value="6">Juli</option>
-            <option value="7">Agustus</option>
-            <option value="8">September</option>
-            <option value="9">Oktober</option>
-            <option value="10">November</option>
-            <option value="11">Desember</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="reportYear">Tahun</label>
-
-          <select id="reportYear">
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-            <option value="2028">2028</option>
-          </select>
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
-  <!-- JUDUL LAPORAN -->
-  <div class="panel">
-    <div style="padding:20px;">
-
-      <h3 id="reportTitle">
-        Laporan Oktober 2026
-      </h3>
-
-      <p
-        id="reportDescription"
-        style="margin-top:5px;color:var(--muted);font-size:12px;"
-      >
-        Data order berdasarkan tanggal deadline.
-      </p>
-
-    </div>
-  </div>
-
-</div>
-    </main>
+  <!-- SEMUA ORDER -->
+  <section id="ordersPage" class="page-section hidden">
+    <div class="section-head"><div><span class="eyebrow">DATABASE ORDER</span><h3 id="sectionTitle">Semua Order</h3><p id="sectionDescription">Kelola seluruh pesanan Anda.</p></div><button class="add-btn" id="addOrderBtn">＋ Tambah Order</button></div>
+    <div class="panel"><div class="filterbar"><select id="statusFilter"><option value="">Semua Status</option><option value="Belum Selesai">Belum Selesai</option><option value="Selesai">Selesai</option></select><select id="paymentFilter"><option value="">Semua Pembayaran</option><option value="Belum Bayar">Belum Bayar</option><option value="Sudah Bayar">Sudah Bayar</option></select><select id="deadlineFilter"><option value="">Semua Deadline</option><option value="today">Jatuh Tempo Hari Ini</option><option value="upcoming">Akan Jatuh Tempo</option><option value="overdue">Terlambat</option></select><span class="filter-count" id="filterCount">0 order</span></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Client</th><th>Deadline</th><th>Harga</th><th>Pembayaran</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="orderBody"></tbody></table></div><div id="emptyState" class="empty hidden"><div class="empty-icon">▤</div><h4>Belum ada order</h4><p>Tambahkan order pertama Anda untuk mulai menggunakan Order Manager.</p></div></div>
   </section>
 
+  <!-- LAPORAN -->
+  <section id="reportPage" class="page-section hidden">
+    <div class="section-head"><div><span class="eyebrow">ANALYTICS</span><h3>Laporan Bulanan</h3><p>Laporan order berdasarkan tanggal deadline.</p></div></div>
+    <div class="panel report-filter"><div class="form-grid"><div class="form-group"><label for="reportMonth">Bulan</label><select id="reportMonth"><option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option><option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option><option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option><option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option></select></div><div class="form-group"><label for="reportYear">Tahun</label><select id="reportYear"><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option></select></div></div></div>
+    <div class="panel report-summary"><div class="report-title-block"><h3 id="reportTitle">Laporan Oktober 2026</h3><p id="reportDescription">Data order berdasarkan tanggal deadline.</p></div></div>
+  </section>
+</div>
+</main>
+</section>
   <!-- ================= ORDER MODAL ================= -->
   <div class="modal-backdrop hidden" id="orderModal">
     <div class="modal">
@@ -686,8 +152,29 @@
     </div>
   </div>
 
+  <!-- MODAL KETERANGAN ORDER -->
+  <div class="note-modal-backdrop hidden" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteModalTitle">
+    <div class="note-modal">
+      <div class="note-modal-head">
+        <div>
+          <span class="note-modal-eyebrow">KETERANGAN ORDER</span>
+          <h3 id="noteModalTitle">Keterangan</h3>
+          <p id="noteModalClient"></p>
+        </div>
+        <button class="note-close-btn" id="closeNoteModal" type="button" aria-label="Tutup">×</button>
+      </div>
+      <div class="note-modal-body">
+        <div class="note-modal-content" id="noteModalContent"></div>
+      </div>
+      <div class="note-modal-foot">
+        <button class="secondary-btn" id="closeNoteModalBottom" type="button">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast"></div>
 
-  <script src="script.js"></script>
+
+<script src="script.js"></script>
 </body>
 </html>
