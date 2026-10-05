@@ -827,4 +827,7 @@
   background:var(--blue);
   color:#fff;
   transform:translateY(-1px);
+}/* JARAK HALAMAN LAPORAN */
+#reportPage{
+  padding:28px 30px 40px;
 }

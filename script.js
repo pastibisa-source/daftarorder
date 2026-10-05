@@ -3041,22 +3041,13 @@ if (navReport) {
         );
 
 
-      if (content) {
+ if (content) {
+  content.classList.remove("hidden");
+}
 
-        Array.from(
-          content.children
-        ).forEach(
-          function (element) {
-
-            element.classList.add(
-              "hidden"
-            );
-
-          }
-        );
-
-      }
-
+ if (content) {
+  content.classList.add("hidden");
+}
 
       if (reportPage) {
 
