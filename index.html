@@ -9,7 +9,9 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <style>
+<link rel="stylesheet" href="style.css">
+
+<style>
     :root{
       --navy:#102a43;
       --navy-2:#173f63;
@@ -316,7 +318,7 @@
       <div class="login-brand">
         <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
         <h1>Axentra Order Manager</h1>
-        <p>Kelola pesanan Anda secara profesional</p>
+        <p>Axentra Prima Aksara Cepat dan Tepat</p>
       </div>
 
       <form id="loginForm">
@@ -337,8 +339,7 @@
       </form>
 
       <div class="login-note">
-        Sistem privat untuk pengelolaan order.<br>
-        Data tersimpan secara online melalui Supabase.
+        Management Order Axentra Prima Aksara.
       </div>
     </div>
   </section>
@@ -347,13 +348,23 @@
   <section id="app" class="hidden">
 
     <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
-        <div>
-          <strong>Axentra<br>Order Manager</strong>
-          <small>ORDER MANAGEMENT</small>
-        </div>
-      </div>
+<div class="brand">
+  <img src="logo.png" alt="Logo Axentra" onerror="this.style.display='none'">
+
+  <div class="brand-text">
+    <strong>Axentra<br>Order Manager</strong>
+    <small>ORDER MANAGEMENT</small>
+  </div>
+
+  <button
+    class="sidebar-collapse-btn"
+    id="sidebarCollapseBtn"
+    type="button"
+    title="Minimalkan sidebar"
+  >
+    ◀
+  </button>
+</div>
 
       <nav class="nav">
         <button class="active" data-page="dashboard">
@@ -436,13 +447,53 @@
           </div>
         </div>
 
-        <div class="section-head">
-          <div>
-            <h3 id="sectionTitle">Daftar Order</h3>
-            <p id="sectionDescription">Semua pesanan yang tersimpan di sistem.</p>
-          </div>
-          <button class="add-btn" id="addOrderBtn">＋ Tambah Order</button>
         </div>
+
+<!-- PENGINGAT DEADLINE -->
+<div class="deadline-panel" id="deadlinePanel">
+
+  <div class="deadline-panel-head">
+
+    <div>
+      <h3>🔔 DAFTAR Deadline</h3>
+    </div>
+
+    <div class="deadline-panel-actions">
+
+      <span
+        id="deadlineAlertCount"
+        class="deadline-count"
+      >0</span>
+
+      <button
+        class="deadline-toggle-btn"
+        id="deadlineToggleBtn"
+        type="button"
+        title="Minimalkan Pengingat Deadline"
+        aria-expanded="true"
+      >▲</button>
+
+    </div>
+
+  </div>
+
+  <div id="deadlineReminderList">
+    <!-- Pengingat deadline akan muncul otomatis di sini -->
+  </div>
+
+</div>
+<div class="section-head">
+  <div>
+    <h3 id="sectionTitle">Daftar Order</h3>
+    <p id="sectionDescription">
+      Semua pesanan yang tersimpan di sistem.
+    </p>
+  </div>
+
+  <button class="add-btn" id="addOrderBtn">
+    ＋ Tambah Order
+  </button>
+</div>
 
         <div class="panel">
           <div class="filterbar">

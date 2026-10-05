@@ -148,6 +148,10 @@
     .section-head{
       display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px;
     }
+    /* Jarak antara Pengingat Deadline dan Daftar Order */
+.deadline-panel + .section-head{
+  margin:28px 18px 20px;
+}
     .section-head h3{font-size:18px}
     .section-head p{font-size:12px;color:var(--muted);margin-top:4px}
     .add-btn{
@@ -262,7 +266,245 @@
     #toast.error{background:#8b2020}
 
     .mobile-menu{display:none}
+/* =========================================
+   PENGINGAT DEADLINE
+   ========================================= */
 
+.deadline-panel{
+  margin-top:22px;
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.deadline-panel-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:20px 22px;
+  border-bottom:1px solid var(--border);
+}
+
+.deadline-panel-head h3{
+  font-size:17px;
+  color:var(--navy);
+  margin:0;
+}
+
+.deadline-panel-head p{
+  margin-top:5px;
+  font-size:12px;
+  color:var(--muted);
+}
+
+.deadline-count{
+  min-width:34px;
+  height:34px;
+  padding:0 10px;
+  border-radius:50px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--danger-soft);
+  color:var(--danger);
+  font-size:13px;
+  font-weight:800;
+}
+
+#deadlineReminderList{
+  display:grid;
+  gap:10px;
+  padding:16px 20px 20px;
+}
+
+.deadline-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#fff;
+  transition:.2s;
+}
+
+.deadline-item:hover{
+  transform:translateY(-1px);
+  box-shadow:0 5px 16px rgba(16,42,67,.06);
+}
+
+.deadline-item-main{
+  min-width:0;
+  flex:1;
+}
+
+.deadline-item-title{
+  font-size:14px;
+  font-weight:800;
+  color:var(--navy);
+  margin-bottom:4px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.deadline-item-client{
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+
+.deadline-item-time{
+  font-size:12px;
+  font-weight:700;
+}
+
+.deadline-item-badge{
+  flex-shrink:0;
+  padding:7px 10px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:800;
+  text-align:center;
+}
+
+/* WARNA STATUS DEADLINE */
+
+.deadline-item.deadline-safe{
+  border-left:4px solid var(--blue);
+}
+
+.deadline-item.deadline-safe .deadline-item-time{
+  color:var(--blue);
+}
+
+.deadline-item.deadline-safe .deadline-item-badge{
+  background:var(--blue-soft);
+  color:var(--blue);
+}
+
+.deadline-item.deadline-warning{
+  border-left:4px solid var(--warning);
+}
+
+.deadline-item.deadline-warning .deadline-item-time{
+  color:var(--warning);
+}
+
+.deadline-item.deadline-warning .deadline-item-badge{
+  background:var(--warning-soft);
+  color:var(--warning);
+}
+
+.deadline-item.deadline-danger{
+  border-left:4px solid var(--danger);
+  background:#fffafa;
+}
+
+.deadline-item.deadline-danger .deadline-item-time{
+  color:var(--danger);
+}
+
+.deadline-item.deadline-danger .deadline-item-badge{
+  background:var(--danger-soft);
+  color:var(--danger);
+}
+
+.deadline-item.deadline-completed{
+  border-left:4px solid var(--success);
+}
+
+.deadline-item.deadline-completed .deadline-item-time{
+  color:var(--success);
+}
+
+.deadline-item.deadline-completed .deadline-item-badge{
+  background:var(--success-soft);
+  color:var(--success);
+}
+
+/* TIDAK ADA PENGINGAT */
+
+.deadline-empty{
+  padding:25px 15px;
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.deadline-empty-icon{
+  font-size:28px;
+  margin-bottom:8px;
+}
+
+.deadline-empty strong{
+  display:block;
+  color:var(--navy);
+  margin-bottom:4px;
+}
+
+/* RESPONSIVE */
+
+@media(max-width:768px){
+
+  .deadline-panel{
+    margin-top:16px;
+    border-radius:14px;
+  }
+
+  .deadline-panel-head{
+    padding:16px;
+  }
+
+  #deadlineReminderList{
+    padding:12px;
+  }
+
+  .deadline-item{
+    align-items:flex-start;
+    padding:13px;
+    gap:10px;
+  }
+
+  .deadline-item-title{
+    white-space:normal;
+  }
+
+  .deadline-item-badge{
+    font-size:10px;
+    padding:6px 8px;
+  }
+}
+
+@media(max-width:480px){
+
+  .deadline-panel-head h3{
+    font-size:15px;
+  }
+
+  .deadline-panel-head p{
+    font-size:11px;
+  }
+
+  .deadline-count{
+    min-width:30px;
+    height:30px;
+    font-size:12px;
+  }
+
+  .deadline-item{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .deadline-item-badge{
+    width:max-content;
+  }
+}
     @media(max-width:1050px){
       .stats{grid-template-columns:repeat(2,1fr)}
       .search{width:210px}
@@ -293,3 +535,296 @@
       .stats{grid-template-columns:1fr}
       .stat{display:flex}
     }
+/* =========================================================
+   FITUR MINIMIZE PENGINGAT DEADLINE
+   ========================================================= */
+
+.deadline-panel-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+}
+
+.deadline-toggle-btn{
+  width:34px;
+  height:34px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  border:1px solid var(--border);
+  border-radius:9px;
+
+  background:#fff;
+  color:var(--navy);
+
+  font-size:13px;
+  font-weight:800;
+
+  cursor:pointer;
+  transition:all .2s ease;
+}
+
+.deadline-toggle-btn:hover{
+  background:var(--blue-soft);
+  color:var(--blue);
+  transform:translateY(-1px);
+}
+
+
+/* Saat Pengingat Deadline diminimalkan */
+
+.deadline-panel.collapsed
+#deadlineReminderList{
+  display:none;
+}
+
+.deadline-panel.collapsed
+.deadline-panel-head{
+  border-bottom:0;
+}
+
+
+/* =========================================================
+   SIDEBAR COLLAPSE / MINIMIZE
+   ========================================================= */
+
+.sidebar{
+  transition:
+    width .25s ease,
+    padding .25s ease;
+}
+
+.sidebar-collapse-btn{
+  position:absolute;
+
+  top:14px;
+  right:10px;
+
+  width:30px;
+  height:30px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:8px;
+
+  background:rgba(255,255,255,.08);
+  color:#fff;
+
+  font-size:13px;
+  font-weight:800;
+
+  cursor:pointer;
+
+  transition:all .2s ease;
+
+  z-index:10;
+}
+
+.sidebar-collapse-btn:hover{
+  background:rgba(255,255,255,.17);
+}
+
+
+/* =========================================================
+   SIDEBAR DALAM KONDISI MINIMIZE
+   ========================================================= */
+
+.sidebar.collapsed{
+  width:78px;
+  padding-left:10px;
+  padding-right:10px;
+}
+
+
+/* Logo tetap terlihat di tengah */
+
+.sidebar.collapsed .brand{
+  justify-content:center;
+  padding-left:0;
+  padding-right:0;
+  padding-top:45px;
+}
+
+.sidebar.collapsed .brand img{
+  width:42px;
+  height:42px;
+}
+
+
+/* Sembunyikan tulisan Axentra */
+
+.sidebar.collapsed .brand-text{
+  display:none;
+}
+
+
+/* Tombol sidebar */
+
+.sidebar.collapsed
+.sidebar-collapse-btn{
+  right:50%;
+  transform:translateX(50%);
+}
+
+
+/* =========================================================
+   MENU SIDEBAR KECIL
+   ========================================================= */
+
+.sidebar.collapsed .nav button{
+  justify-content:center;
+  padding-left:8px;
+  padding-right:8px;
+
+  font-size:0;
+}
+
+.sidebar.collapsed .nav-icon{
+  width:auto;
+  font-size:17px;
+}
+
+
+/* =========================================================
+   USER ADMIN
+   ========================================================= */
+
+.sidebar.collapsed .user-mini{
+  padding:9px 4px;
+  text-align:center;
+}
+
+.sidebar.collapsed .user-mini strong,
+.sidebar.collapsed .user-mini span{
+  display:none;
+}
+
+
+/* =========================================================
+   TOMBOL KELUAR
+   ========================================================= */
+
+.sidebar.collapsed .logout-btn{
+  font-size:0;
+  padding:10px 5px;
+}
+
+.sidebar.collapsed .logout-btn::before{
+  content:"↪";
+  font-size:18px;
+}
+
+
+/* =========================================================
+   AREA DASHBOARD IKUT MELEBAR
+   ========================================================= */
+
+.main{
+  transition:
+    margin-left .25s ease,
+    width .25s ease;
+}
+
+.main.sidebar-collapsed{
+  margin-left:78px;
+  width:calc(100% - 78px);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media(max-width:760px){
+
+  /* Pada HP sidebar tetap menggunakan tombol ☰ */
+  
+  .sidebar-collapse-btn{
+    display:none;
+  }
+
+  .sidebar.collapsed{
+    width:250px;
+    padding-left:14px;
+    padding-right:14px;
+  }
+
+  .sidebar.collapsed .brand{
+    justify-content:flex-start;
+    padding:8px 10px 25px;
+  }
+
+  .sidebar.collapsed .brand-text{
+    display:block;
+  }
+
+  .sidebar.collapsed .nav button{
+    justify-content:flex-start;
+    padding:12px 13px;
+    font-size:inherit;
+  }
+
+  .sidebar.collapsed .nav-icon{
+    width:20px;
+    font-size:inherit;
+  }
+
+  .sidebar.collapsed .user-mini{
+    text-align:left;
+    padding:12px;
+  }
+
+  .sidebar.collapsed .user-mini strong,
+  .sidebar.collapsed .user-mini span{
+    display:block;
+  }
+
+  .sidebar.collapsed .logout-btn{
+    font-size:inherit;
+    padding:10px;
+  }
+
+  .sidebar.collapsed .logout-btn::before{
+    content:none;
+  }
+
+  .main.sidebar-collapsed{
+    margin-left:0;
+    width:100%;
+  }
+
+}/* =========================================================
+   TOMBOL LIHAT TUGAS PADA PENGINGAT DEADLINE
+   ========================================================= */
+
+.deadline-view-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-top:8px;
+  padding:6px 11px;
+
+  border:1px solid var(--blue);
+  border-radius:8px;
+
+  background:var(--blue-soft);
+  color:var(--blue);
+
+  font-size:11px;
+  font-weight:700;
+
+  cursor:pointer;
+  transition:all .2s ease;
+}
+
+.deadline-view-btn:hover{
+  background:var(--blue);
+  color:#fff;
+  transform:translateY(-1px);
+}

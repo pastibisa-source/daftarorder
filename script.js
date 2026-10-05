@@ -512,12 +512,14 @@ async function loadOrders() {
   }
 
 
-  orders = data || [];
+orders = data || [];
 
 
-  renderOrders();
+renderOrders();
 
-  updateStats();
+updateStats();
+
+renderDeadlineReminders();
 
 }
 
@@ -1184,7 +1186,251 @@ function updateStats() {
 
 }
 
+/* =========================================================
+   23B. PENGINGAT DEADLINE
+   ========================================================= */
 
+const deadlineReminderList =
+  document.getElementById("deadlineReminderList");
+
+const deadlineAlertCount =
+  document.getElementById("deadlineAlertCount");
+
+
+function formatRemainingTime(deadlineValue) {
+
+  const now = new Date();
+  const target = new Date(deadlineValue);
+
+  const difference =
+    target.getTime() - now.getTime();
+
+  if (difference <= 0) {
+    return "Deadline sudah lewat";
+  }
+
+  const totalMinutes =
+    Math.floor(difference / (1000 * 60));
+
+  const days =
+    Math.floor(totalMinutes / (60 * 24));
+
+  const hours =
+    Math.floor(
+      (totalMinutes % (60 * 24)) / 60
+    );
+
+  const minutes =
+    totalMinutes % 60;
+
+
+  if (days > 0) {
+    return `${days} hari ${hours} jam lagi`;
+  }
+
+  if (hours > 0) {
+    return `${hours} jam ${minutes} menit lagi`;
+  }
+
+  return `${minutes} menit lagi`;
+}
+
+
+function getDeadlineReminderClass(order) {
+
+  if (order.status === "Selesai") {
+    return "deadline-completed";
+  }
+
+  const now = new Date();
+  const target = new Date(order.deadline);
+
+  const difference =
+    target.getTime() - now.getTime();
+
+  const hours =
+    difference / (1000 * 60 * 60);
+
+
+  if (difference <= 0) {
+    return "deadline-danger";
+  }
+
+  if (hours <= 24) {
+    return "deadline-danger";
+  }
+
+  if (hours <= 72) {
+    return "deadline-warning";
+  }
+
+  return "deadline-safe";
+}
+
+
+function getDeadlineBadge(order) {
+
+  if (order.status === "Selesai") {
+    return "✓ Selesai";
+  }
+
+  const now = new Date();
+  const target = new Date(order.deadline);
+
+  const difference =
+    target.getTime() - now.getTime();
+
+  const hours =
+    difference / (1000 * 60 * 60);
+
+
+  if (difference <= 0) {
+    return "⚠ Terlambat";
+  }
+
+  if (hours <= 24) {
+    return "🔴 ≤ 24 Jam";
+  }
+
+  if (hours <= 72) {
+    return "🟡 2–3 Hari";
+  }
+
+  return "🔵 Aman";
+}
+
+
+function renderDeadlineReminders() {
+
+  if (!deadlineReminderList) {
+    return;
+  }
+
+  // HANYA tampilkan order yang BELUM SELESAI
+  // dan memiliki deadline
+  const activeOrders =
+    orders
+      .filter(function(order) {
+
+        return (
+          order.deadline &&
+          order.status !== "Selesai"
+        );
+
+      })
+      .sort(function(a, b) {
+
+        return (
+          new Date(a.deadline) -
+          new Date(b.deadline)
+        );
+
+      });
+
+
+  // Update jumlah pengingat
+  if (deadlineAlertCount) {
+
+    deadlineAlertCount.textContent =
+      activeOrders.length;
+
+  }
+
+
+  // Jika tidak ada order yang belum selesai
+  if (activeOrders.length === 0) {
+
+    deadlineReminderList.innerHTML = `
+      <div class="deadline-empty">
+
+        <div class="deadline-empty-icon">
+          🔔
+        </div>
+
+        <strong>
+          Tidak ada pengingat deadline
+        </strong>
+
+        Semua order sudah selesai atau
+        belum memiliki deadline.
+
+      </div>
+    `;
+
+    return;
+  }
+
+
+  // Tampilkan daftar order belum selesai
+  deadlineReminderList.innerHTML =
+    activeOrders
+      .map(function(order) {
+
+        const reminderClass =
+          getDeadlineReminderClass(order);
+
+        const badge =
+          getDeadlineBadge(order);
+
+        const remaining =
+          formatRemainingTime(
+            order.deadline
+          );
+
+
+        return `
+          <div class="deadline-item ${reminderClass}">
+
+            <div class="deadline-item-main">
+
+              <div class="deadline-item-title">
+                ${escapeHtml(order.nama_tugas)}
+              </div>
+
+              <div class="deadline-item-client">
+                Client: ${escapeHtml(order.client)}
+              </div>
+
+              <div class="deadline-item-time">
+                ⏱️ ${remaining}
+              </div>
+<button
+  type="button"
+  class="deadline-view-btn"
+  onclick="editOrder(${Number(order.id)})"
+>
+  👁 Lihat Tugas
+</button>
+            </div>
+
+            <div class="deadline-item-badge">
+              ${badge}
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+}
+/* UPDATE COUNTDOWN SETIAP MENIT */
+
+setInterval(
+  function() {
+
+    if (
+      typeof orders !== "undefined" &&
+      orders.length > 0
+    ) {
+
+      renderDeadlineReminders();
+
+    }
+
+  },
+  60000
+);
 /* =========================================================
    24. OPEN ADD ORDER MODAL
    ========================================================= */
@@ -2842,6 +3088,132 @@ if (navReport) {
 
 /* =========================================================
    38. START APPLICATION
+   ========================================================= */
+/* =========================================================
+   38. MINIMIZE PENGINGAT DEADLINE & SIDEBAR
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   MINIMIZE PENGINGAT DEADLINE
+   --------------------------------------------------------- */
+
+const deadlinePanel =
+  document.getElementById("deadlinePanel");
+
+const deadlineToggleBtn =
+  document.getElementById("deadlineToggleBtn");
+
+
+if (deadlineToggleBtn) {
+
+  deadlineToggleBtn.onclick = function () {
+
+    if (
+      deadlinePanel.classList.contains("collapsed")
+    ) {
+
+      // BUKA
+      deadlinePanel.classList.remove("collapsed");
+
+      deadlineToggleBtn.textContent = "▲";
+
+      deadlineToggleBtn.title =
+        "Minimalkan Pengingat Deadline";
+
+      deadlineToggleBtn.setAttribute(
+        "aria-expanded",
+        "true"
+      );
+
+    }
+
+    else {
+
+      // MINIMIZE
+      deadlinePanel.classList.add("collapsed");
+
+      deadlineToggleBtn.textContent = "▼";
+
+      deadlineToggleBtn.title =
+        "Tampilkan Pengingat Deadline";
+
+      deadlineToggleBtn.setAttribute(
+        "aria-expanded",
+        "false"
+      );
+
+    }
+
+  };
+
+}
+/* ---------------------------------------------------------
+   MINIMIZE SIDEBAR DESKTOP
+   --------------------------------------------------------- */
+
+const sidebarCollapseBtn =
+  document.getElementById(
+    "sidebarCollapseBtn"
+  );
+
+
+const mainContent =
+  document.querySelector(
+    ".main"
+  );
+
+
+if (
+  sidebar &&
+  sidebarCollapseBtn &&
+  mainContent
+) {
+
+  sidebarCollapseBtn.addEventListener(
+    "click",
+    function () {
+
+      const isCollapsed =
+        sidebar.classList.toggle(
+          "collapsed"
+        );
+
+
+      mainContent.classList.toggle(
+        "sidebar-collapsed",
+        isCollapsed
+      );
+
+
+      if (isCollapsed) {
+
+        sidebarCollapseBtn.textContent =
+          "▶";
+
+        sidebarCollapseBtn.title =
+          "Perbesar Sidebar";
+
+      }
+
+      else {
+
+        sidebarCollapseBtn.textContent =
+          "◀";
+
+        sidebarCollapseBtn.title =
+          "Minimalkan Sidebar";
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   39. START APPLICATION
    ========================================================= */
 
 checkSession();
