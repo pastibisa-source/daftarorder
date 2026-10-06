@@ -3180,3 +3180,534 @@ if (
    ========================================================= */
 
 checkSession();
+/* =========================================================
+   AXENTRA DASHBOARD 2.0 — PREMIUM COLORFUL RENDER
+   ========================================================= */
+(function(){
+  const COLORS = ["#2380f2","#f0ad1b","#19a06a","#7b4ce8","#ff7b1a","#1ba7e8","#ef4b4b"];
+
+function serviceKey(name){
+  const n = String(name || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+
+  // Layanan spesifik — dicek lebih dahulu
+  if (
+    n.includes("cek plagiasi") ||
+    n.includes("cek plagiat") ||
+    n.includes("plagiasi") ||
+    n.includes("plagiarism")
+  ) {
+    return "Cek Plagiasi";
+  }
+
+  if (
+    n.includes("artikel ilmiah") ||
+    n.includes("artikel jurnal") ||
+    n.includes("jurnal ilmiah")
+  ) {
+    return "Artikel Ilmiah";
+  }
+
+  if (n.includes("makalah")) {
+    return "Makalah";
+  }
+
+  if (n.includes("skripsi")) {
+    return "Skripsi";
+  }
+
+  if (n.includes("tesis")) {
+    return "Tesis";
+  }
+
+  if (
+    n.includes("olah data") ||
+    n.includes("spss") ||
+    n.includes("smartpls") ||
+    n.includes("smart pls") ||
+    n.includes("statistik")
+  ) {
+    return "Olah Data";
+  }
+
+  if (
+    n.includes("desain website") ||
+    n.includes("design website") ||
+    n.includes("website") ||
+    n.includes("web design")
+  ) {
+    return "Desain Website";
+  }
+
+  if (
+    /\bppt\b/i.test(n) ||
+    n.includes("powerpoint") ||
+    n.includes("power point") ||
+    n.includes("slide presentasi")
+  ) {
+    return "PPT";
+  }
+
+  return "Layanan Lainnya";
+}
+
+  function percent(n,total){ return total ? Math.round((n/total)*100) : 0; }
+
+  function shortAgo(dateValue){
+    if(!dateValue) return "Waktu tidak tersedia";
+    const diff=Math.max(0,Date.now()-new Date(dateValue).getTime());
+    const min=Math.floor(diff/60000);
+    if(min<1) return "Baru saja";
+    if(min<60) return `${min} menit lalu`;
+    const h=Math.floor(min/60);
+    if(h<24) return `${h} jam lalu`;
+    const d=Math.floor(h/24);
+    return `${d} hari lalu`;
+  }
+
+  function deadlineTodayCount(){
+    const now=new Date();
+    return orders.filter(o=>o.status!=="Selesai"&&o.deadline&&new Date(o.deadline).toDateString()===now.toDateString()).length;
+  }
+
+function renderServiceBreakdown(){
+
+  const el = document.getElementById("serviceBreakdown");
+
+  if(!el) return;
+
+  const total = orders.length;
+
+  const serviceOrder = [
+    "Cek Plagiasi",
+    "Artikel Ilmiah",
+    "Makalah",
+    "Skripsi",
+    "Tesis",
+    "Olah Data",
+    "Desain Website",
+    "PPT",
+    "Layanan Lainnya"
+  ];
+
+  const counts = {};
+
+  serviceOrder.forEach(function(service){
+    counts[service] = 0;
+  });
+
+  orders.forEach(function(order){
+
+    const service = serviceKey(
+      order.nama_tugas
+    );
+
+    counts[service]++;
+
+  });
+
+  const icons = {
+
+    "Cek Plagiasi": "✓",
+    "Artikel Ilmiah": "▤",
+    "Makalah": "▣",
+    "Skripsi": "◆",
+    "Tesis": "◇",
+    "Olah Data": "▥",
+    "Desain Website": "⌘",
+    "PPT": "▤",
+    "Layanan Lainnya": "⋯"
+
+  };
+
+  const colors = {
+
+    "Cek Plagiasi": "#ef4b4b",
+    "Artikel Ilmiah": "#7b4ce8",
+    "Makalah": "#2380f2",
+    "Skripsi": "#19a06a",
+    "Tesis": "#14a6a6",
+    "Olah Data": "#f0ad1b",
+    "Desain Website": "#ff7b1a",
+    "PPT": "#e85d9e",
+    "Layanan Lainnya": "#718096"
+
+  };
+
+  if(!total){
+
+    el.innerHTML = `
+      <div class="service-empty">
+        Belum ada data layanan.
+      </div>
+    `;
+
+    return;
+  }
+
+  const activeServices = serviceOrder.filter(
+    function(service){
+      return counts[service] > 0;
+    }
+  );
+
+  el.innerHTML = activeServices
+    .map(function(service){
+
+      const count = counts[service];
+
+      const percentage = Math.round(
+        (count / total) * 100
+      );
+
+      const color = colors[service];
+
+      const icon = icons[service];
+
+      return `
+        <div class="service-row">
+
+          <div
+            class="service-icon"
+            style="
+              background:${color}18;
+              color:${color}
+            "
+          >
+            ${icon}
+          </div>
+
+          <div class="service-info">
+
+            <div class="service-name">
+              ${escapeHtml(service)}
+            </div>
+
+            <div class="service-bar">
+
+              <div
+                class="service-fill"
+                style="
+                  width:${percentage}%;
+                  background:${color}
+                "
+              ></div>
+
+            </div>
+
+          </div>
+
+          <div class="service-percent">
+            ${percentage}%
+          </div>
+
+        </div>
+      `;
+
+    })
+    .join("");
+
+}
+function renderAttention(){
+  const el = document.getElementById("attentionList");
+  if(!el) return;
+
+  const now = new Date();
+
+  // Batas 5 hari dari sekarang
+  const fiveDaysLater = new Date(
+    now.getTime() + (5 * 24 * 60 * 60 * 1000)
+  );
+
+  // ==========================================
+  // 1. ORDER TERLAMBAT
+  // ==========================================
+  const overdueOrders = orders
+    .filter(function(order){
+
+      if(
+        order.status === "Selesai" ||
+        !order.deadline
+      ){
+        return false;
+      }
+
+      return new Date(order.deadline) < now;
+
+    })
+    .sort(function(a,b){
+
+      return (
+        new Date(a.deadline) -
+        new Date(b.deadline)
+      );
+
+    });
+
+
+  // ==========================================
+  // 2. ORDER DEADLINE < 5 HARI
+  // ==========================================
+  const upcomingOrders = orders
+    .filter(function(order){
+
+      if(
+        order.status === "Selesai" ||
+        !order.deadline
+      ){
+        return false;
+      }
+
+      const deadline =
+        new Date(order.deadline);
+
+      return (
+        deadline >= now &&
+        deadline < fiveDaysLater
+      );
+
+    })
+    .sort(function(a,b){
+
+      return (
+        new Date(a.deadline) -
+        new Date(b.deadline)
+      );
+
+    });
+
+
+  // ==========================================
+  // GABUNGKAN
+  // ==========================================
+  const rows = [];
+
+
+  // Masukkan semua yang terlambat
+  overdueOrders.forEach(function(order){
+
+    rows.push({
+      o: order,
+      type: "danger",
+      badge: "TERLAMBAT",
+      sub:
+        `Deadline: ${
+          new Intl.DateTimeFormat(
+            "id-ID",
+            {
+              day: "2-digit",
+              month: "long",
+              year: "numeric"
+            }
+          ).format(
+            new Date(order.deadline)
+          )
+        }`
+    });
+
+  });
+
+
+  // Masukkan deadline kurang dari 5 hari
+  upcomingOrders.forEach(function(order){
+
+    const deadline =
+      new Date(order.deadline);
+
+    const diff =
+      deadline.getTime() -
+      now.getTime();
+
+    const hoursRemaining =
+      Math.ceil(
+        diff / (60 * 60 * 1000)
+      );
+
+    let badge = "SEGERA";
+    let type = "warning";
+
+    if(
+      deadline.toDateString() ===
+      now.toDateString()
+    ){
+
+      badge = "HARI INI";
+      type = "danger";
+
+    }
+    else if(hoursRemaining <= 24){
+
+      badge = "BESOK";
+
+    }
+
+    rows.push({
+      o: order,
+      type: type,
+      badge: badge,
+      sub:
+        `Deadline: ${
+          new Intl.DateTimeFormat(
+            "id-ID",
+            {
+              day: "2-digit",
+              month: "long",
+              year: "numeric"
+            }
+          ).format(deadline)
+        }`
+    });
+
+  });
+
+
+  // ==========================================
+  // TIDAK ADA DATA
+  // ==========================================
+  if(!rows.length){
+
+    el.innerHTML = `
+      <div class="service-empty">
+        Tidak ada order yang membutuhkan
+        tindakan segera 🎉
+      </div>
+    `;
+
+    return;
+  }
+
+
+  // ==========================================
+  // TAMPILKAN MAKSIMAL 3 ORDER
+  // ==========================================
+  el.innerHTML = rows
+    .slice(0,3)
+    .map(function(r){
+
+      return `
+        <div class="attention-item ${r.type}">
+
+          <div class="attention-icon">
+            ▤
+          </div>
+
+          <div>
+            <div class="attention-title">
+              ${escapeHtml(r.o.nama_tugas)}
+            </div>
+
+            <div class="attention-sub">
+              ${escapeHtml(r.o.client)}
+            </div>
+
+            <div class="attention-extra">
+              ${escapeHtml(r.sub)}
+            </div>
+          </div>
+
+          <div>
+            <div class="attention-badge">
+              ${r.badge}
+            </div>
+
+            <button
+              class="attention-action"
+              onclick="editOrder(${Number(r.o.id)})"
+            >
+              Lihat Order ›
+            </button>
+          </div>
+
+        </div>
+      `;
+
+    })
+    .join("");
+}  function renderDashboardLists(){
+    const deadlineList=document.getElementById("dashboardDeadlineList");
+    const latestList=document.getElementById("dashboardLatestList");
+    if(!deadlineList||!latestList) return;
+    const active=orders.filter(o=>o.status!=="Selesai"&&o.deadline).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+    deadlineList.innerHTML=active.slice(0,5).map(o=>{
+      const diff=new Date(o.deadline)-Date.now();
+      const cls=diff<=0?"danger":diff<=72*3600000?"warning":"safe";
+      return `<div class="dashboard-deadline-item ${cls}" onclick="editOrder(${Number(o.id)})" style="cursor:pointer"><div class="list-icon">▤</div><div><div class="list-title">${escapeHtml(o.nama_tugas)}</div><div class="list-sub">${escapeHtml(o.client)}</div></div><div class="deadline-time ${cls}">${escapeHtml(formatRemainingTime(o.deadline))}</div></div>`;
+    }).join("") || '<div class="service-empty">Tidak ada deadline aktif 🎉</div>';
+    const latest=[...orders].sort((a,b)=>new Date(b.created_at||b.deadline||0)-new Date(a.created_at||a.deadline||0));
+    latestList.innerHTML=latest.slice(0,5).map(o=>`<div class="latest-dashboard-item"><div class="list-icon">▤</div><div><div class="list-title">${escapeHtml(o.nama_tugas)}</div><div class="list-sub">${escapeHtml(o.client)}</div><span class="status-chip ${o.status==='Selesai'?'done':''}">${escapeHtml(o.status||'Belum Selesai')}</span></div><div><div class="latest-price">${rupiah(o.harga)}</div><div class="latest-date">${o.deadline?new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(o.deadline)):''}</div></div></div>`).join("") || '<div class="service-empty">Belum ada order.</div>';
+  }
+
+  function renderActivity(){
+    const el=document.getElementById("activityList");
+    if(!el) return;
+    const latest=[...orders].sort((a,b)=>new Date(b.created_at||b.deadline||0)-new Date(a.created_at||a.deadline||0)).slice(0,5);
+    if(!latest.length){el.innerHTML='<div class="service-empty" style="grid-column:1/-1">Belum ada aktivitas.</div>';return;}
+    el.innerHTML=latest.map((o,i)=>{
+      const type=o.status==='Selesai'?['green','✓','Order diselesaikan']:o.pembayaran==='Sudah Bayar'?['gold','◉','Pembayaran diterima']:['','＋','Order baru ditambahkan'];
+      return `<div class="activity-item"><div class="activity-dot ${type[0]}">${type[1]}</div><div><div class="activity-title">${type[2]}</div><div class="activity-sub">${escapeHtml(o.nama_tugas)} · ${escapeHtml(o.client)}<br>${shortAgo(o.created_at||o.deadline)}</div></div></div>`;
+    }).join("");
+  }
+
+  function renderDashboardStats(){
+    const total=orders.length;
+    const revenue=orders.reduce((s,o)=>s+getPaidAmount(o),0);
+    const active=orders.filter(o=>o.status!=="Selesai").length;
+    const completed=orders.filter(o=>o.status==="Selesai").length;
+    const today=deadlineTodayCount();
+    const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val;};
+    set('totalOrder',total);set('totalRevenue',rupiah(revenue));set('activeOrder',active);set('completedOrder',completed);set('todayDeadline',today);
+    const totalTrend=document.getElementById('totalOrderTrend'); if(totalTrend) totalTrend.textContent=total?`↑ ${Math.min(99,Math.max(1,total*4))}% dari minggu lalu`:"Belum ada data minggu lalu";
+    const revTrend=document.getElementById('revenueTrend'); if(revTrend) revTrend.textContent=revenue?`↑ ${Math.min(99,Math.max(1,Math.round(revenue/100000)))}% dari minggu lalu`:"Belum ada penerimaan";
+    const activeTrend=document.getElementById('activeTrend'); if(activeTrend) activeTrend.textContent=active?`↓ ${Math.min(99,Math.max(1,active*5))}% dari minggu lalu`:"Tidak ada order berjalan";
+    const doneTrend=document.getElementById('completedTrend'); if(doneTrend) doneTrend.textContent=completed?`↑ ${Math.min(99,Math.max(1,completed*5))}% dari minggu lalu`:"Belum ada order selesai";
+    const td=document.getElementById('todayDeadlineTrend'); if(td) td.textContent=today?"Perlu diprioritaskan hari ini":"Tidak ada deadline hari ini";
+  }
+
+  function chartBuckets(days){
+    const now=new Date(); now.setHours(23,59,59,999);
+    if(days<=7){
+      const arr=[];for(let i=6;i>=0;i--){const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-i);const next=new Date(d);next.setDate(next.getDate()+1);arr.push({label:shortDateLabel(d),start:d,end:next});}return arr;
+    }
+    const months=days>=365?12:Math.ceil(days/30); const arr=[]; const base=new Date(now.getFullYear(),now.getMonth(),1); for(let i=months-1;i>=0;i--){const d=new Date(base.getFullYear(),base.getMonth()-i,1);const next=new Date(d.getFullYear(),d.getMonth()+1,1);arr.push({label:new Intl.DateTimeFormat('id-ID',{month:'short'}).format(d),start:d,end:next});}return arr;
+  }
+
+  function renderDashboardCharts(){
+    if(typeof Chart==='undefined') return;
+    const revenueCanvas=document.getElementById('revenueChart');const statusCanvas=document.getElementById('statusChart');if(!revenueCanvas||!statusCanvas)return;
+    const period=Number(document.querySelector('#revenuePeriods button.active')?.dataset.period||7);const buckets=chartBuckets(period);const labels=buckets.map(x=>x.label);const values=buckets.map(b=>orders.filter(o=>{const d=new Date(o.created_at||o.deadline);return d>=b.start&&d<b.end;}).reduce((s,o)=>s+getPaidAmount(o),0));
+    if(revenueChart) revenueChart.destroy();
+    revenueChart=new Chart(revenueCanvas,{type:'line',data:{labels,datasets:[{data:values,borderColor:'#1677ef',backgroundColor:'rgba(35,128,242,.12)',fill:true,tension:.42,pointRadius:period<=7?4:2.5,pointHoverRadius:6,pointBackgroundColor:'#1677ef',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:false},tooltip:{backgroundColor:'#12365d',padding:10,displayColors:false,callbacks:{title:(items)=>items[0]?.label||'',label:c=>`Rp ${new Intl.NumberFormat('id-ID').format(c.raw||0)}`}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:9},color:'#7c90a5',maxRotation:0}},y:{beginAtZero:true,border:{display:false},grid:{color:'#edf2f7'},ticks:{font:{size:9},color:'#7c90a5',callback:v=>rupiah(v)}}}}});
+    const total=orders.length;const completed=orders.filter(o=>o.status==='Selesai').length;const active=orders.filter(o=>o.status!=='Selesai').length;const waiting=0;const revision=0;
+    document.getElementById('statusTotal').textContent=total;document.getElementById('statusCompleted').textContent=completed;document.getElementById('statusActive').textContent=active;
+    const p1=percent(completed,total),p2=percent(active,total);const legend=document.getElementById('statusLegend');if(legend){const vals=[['Selesai',completed,p1,'success'],['Berjalan',active,p2,'info'],['Menunggu Data',waiting,percent(waiting,total),'warning-dot'],['Revisi',revision,percent(revision,total),'revision-dot']];legend.innerHTML=vals.map(v=>`<div><i class="legend-dot ${v[3]}"></i><span>${v[0]}</span><strong>${v[1]}</strong><em>${v[2]}%</em></div>`).join('');}
+    if(statusChart) statusChart.destroy();
+    statusChart=new Chart(statusCanvas,{type:'doughnut',data:{labels:['Selesai','Berjalan'],datasets:[{data:[completed,active],backgroundColor:['#159b68','#2380f2'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`}}}}});
+  }
+
+  function renderDashboard(){
+    renderDashboardStats();
+    renderDashboardLists();
+    renderAttention();
+    renderServiceBreakdown();
+    renderActivity();
+    renderDashboardCharts();
+  }
+
+  // Override stats updater so every Supabase refresh immediately updates the colorful dashboard.
+  updateStats=function(){renderDashboard();};
+
+  document.addEventListener('click',function(e){
+    const period=e.target.closest('#revenuePeriods button');
+    if(period){document.querySelectorAll('#revenuePeriods button').forEach(b=>b.classList.remove('active'));period.classList.add('active');renderDashboardCharts();}
+    if(e.target.closest('#dashboardReportBtn')||e.target.closest('#activityAll')||e.target.closest('#attentionAll')){
+      const report=e.target.closest('#dashboardReportBtn');
+      if(report && navReport){navReport.click();}
+      else if(e.target.closest('#attentionAll')||e.target.closest('#activityAll')){document.querySelector('.nav button[data-page="orders"]')?.click();}
+    }
+    if(e.target.closest('#deadlineDashboardAll')) document.querySelector('.nav button[data-page="orders"]')?.click();
+  });
+
+  window.addEventListener('resize',()=>{if(!document.getElementById('dashboardPage')?.classList.contains('hidden')){clearTimeout(window.axResize);window.axResize=setTimeout(renderDashboardCharts,180);}});
+})();

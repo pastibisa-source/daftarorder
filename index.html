@@ -48,21 +48,92 @@
 <div class="content">
   <!-- DASHBOARD -->
   <section id="dashboardPage" class="page-section">
-    <div class="welcome-row"><div><span class="eyebrow">OVERVIEW</span><h1>Dashboard</h1><p>Pantau order, pendapatan, deadline, dan pekerjaan yang perlu diperhatikan.</p></div><button class="add-btn" id="dashboardAddBtn">＋ Tambah Order</button></div>
-    <div class="stats">
-      <div class="stat stat-blue"><div><div class="stat-label">TOTAL ORDER</div><div class="stat-value" id="totalOrder">0</div><div class="stat-meta">Seluruh order tersimpan</div></div><div class="stat-icon">▤</div></div>
-      <div class="stat stat-gold"><div><div class="stat-label">TOTAL PENDAPATAN</div><div class="stat-value" id="totalRevenue">Rp0</div><div class="stat-meta">Pendapatan + DP diterima</div></div><div class="stat-icon">Rp</div></div>
-      <div class="stat stat-orange"><div><div class="stat-label">ORDER BERJALAN</div><div class="stat-value" id="activeOrder">0</div><div class="stat-meta">Masih dalam pengerjaan</div></div><div class="stat-icon">◷</div></div>
-      <div class="stat stat-green"><div><div class="stat-label">ORDER SELESAI</div><div class="stat-value" id="completedOrder">0</div><div class="stat-meta">Sudah diselesaikan</div></div><div class="stat-icon">✓</div></div>
+    <div class="welcome-row dashboard-hero">
+      <div>
+        <span class="eyebrow">OVERVIEW</span>
+        <h1>Dashboard</h1>
+        <p>Ringkasan aktivitas dan kondisi order Anda hari ini.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="add-btn" id="dashboardAddBtn">＋ Tambah Order</button>
+        <button class="outline-btn" id="dashboardReportBtn">▥ Lihat Laporan</button>
+      </div>
     </div>
-    <div class="dashboard-grid charts-grid">
-      <section class="panel chart-panel"><div class="panel-head"><div><h3>Pendapatan</h3><p>Tren penerimaan berdasarkan order</p></div><span class="panel-icon blue">↗</span></div><div class="chart-wrap"><canvas id="revenueChart"></canvas></div></section>
-      <section class="panel chart-panel status-chart-panel"><div class="panel-head"><div><h3>Status Order</h3><p>Perbandingan order selesai dan berjalan</p></div><span class="panel-icon gold">◉</span></div><div class="status-chart-body"><div class="donut-wrap"><canvas id="statusChart"></canvas><div class="donut-center"><strong id="statusTotal">0</strong><span>Order</span></div></div><div class="status-legend"><div><i class="legend-dot success"></i><span>Selesai</span><strong id="statusCompleted">0</strong></div><div><i class="legend-dot info"></i><span>Berjalan</span><strong id="statusActive">0</strong></div></div></div></section>
+
+    <div class="stats colorful-stats">
+      <div class="stat stat-blue">
+        <div class="stat-copy"><div class="stat-label">TOTAL ORDER</div><div class="stat-value" id="totalOrder">0</div><div class="stat-trend positive" id="totalOrderTrend">↑ 12% dari minggu lalu</div></div>
+        <div class="stat-visual blue"><span>▤</span><i></i></div>
+      </div>
+      <div class="stat stat-gold">
+        <div class="stat-copy"><div class="stat-label">PENDAPATAN DITERIMA</div><div class="stat-value" id="totalRevenue">Rp0</div><div class="stat-trend positive" id="revenueTrend">↑ 28% dari minggu lalu</div></div>
+        <div class="stat-visual gold"><span>Rp</span><i></i></div>
+      </div>
+      <div class="stat stat-orange">
+        <div class="stat-copy"><div class="stat-label">ORDER BERJALAN</div><div class="stat-value" id="activeOrder">0</div><div class="stat-trend negative" id="activeTrend">↓ 20% dari minggu lalu</div></div>
+        <div class="stat-visual orange"><span>◷</span><i></i></div>
+      </div>
+      <div class="stat stat-green">
+        <div class="stat-copy"><div class="stat-label">ORDER SELESAI</div><div class="stat-value" id="completedOrder">0</div><div class="stat-trend positive" id="completedTrend">↑ 50% dari minggu lalu</div></div>
+        <div class="stat-visual green"><span>✓</span><i></i></div>
+      </div>
+      <div class="stat stat-red">
+        <div class="stat-copy"><div class="stat-label">DEADLINE HARI INI</div><div class="stat-value" id="todayDeadline">0</div><div class="stat-trend danger-text" id="todayDeadlineTrend">Perlu diprioritaskan hari ini</div></div>
+        <div class="stat-visual red"><span>▣</span><i></i></div>
+      </div>
     </div>
-    <div class="dashboard-grid lower-grid">
-      <section class="panel dashboard-list"><div class="panel-head"><div><h3>🔔 Deadline Terdekat</h3><p>Prioritas pekerjaan yang belum selesai</p></div><span class="count-pill" id="dashboardDeadlineCount">0</span></div><div id="dashboardDeadlineList" class="compact-list"></div><button class="text-link" id="dashboardDeadlineAll">Lihat semua order →</button></section>
-      <section class="panel dashboard-list"><div class="panel-head"><div><h3>🆕 Order Terbaru</h3><p>Order terakhir yang masuk ke sistem</p></div><span class="count-pill blue-pill" id="dashboardLatestCount">0</span></div><div id="dashboardLatestList" class="compact-list"></div><button class="text-link" id="dashboardLatestAll">Lihat semua order →</button></section>
+
+    <div class="dashboard-grid main-charts-grid">
+      <section class="panel chart-panel revenue-panel">
+        <div class="panel-head enhanced-head">
+          <div><h3>📊 Pendapatan</h3><p>Tren penerimaan berdasarkan order</p></div>
+          <div class="period-tabs" id="revenuePeriods">
+            <button class="active" data-period="7">7 Hari</button><button data-period="30">30 Hari</button><button data-period="90">3 Bulan</button><button data-period="365">Tahun</button>
+          </div>
+        </div>
+        <div class="chart-wrap large-chart"><canvas id="revenueChart"></canvas></div>
+      </section>
+
+      <section class="panel chart-panel status-chart-panel">
+        <div class="panel-head enhanced-head"><div><h3>◉ Status Order</h3><p>Perbandingan status seluruh order</p></div><span class="panel-icon gold">◉</span></div>
+        <div class="status-chart-body colorful-status-body">
+          <div class="donut-wrap large-donut"><canvas id="statusChart"></canvas><div class="donut-center"><strong id="statusTotal">0</strong><span>Order</span></div></div>
+          <div class="status-legend detailed-status-legend" id="statusLegend">
+            <div><i class="legend-dot success"></i><span>Selesai</span><strong id="statusCompleted">0</strong><em>0%</em></div>
+            <div><i class="legend-dot info"></i><span>Berjalan</span><strong id="statusActive">0</strong><em>0%</em></div>
+            <div><i class="legend-dot warning-dot"></i><span>Menunggu Data</span><strong>0</strong><em>0%</em></div>
+            <div><i class="legend-dot revision-dot"></i><span>Revisi</span><strong>0</strong><em>0%</em></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel service-panel">
+        <div class="panel-head enhanced-head"><div><h3>▣ Order berdasarkan Jenis Layanan</h3><p>Persentase jenis layanan yang paling banyak dipesan</p></div><span class="panel-icon blue">▤</span></div>
+        <div id="serviceBreakdown" class="service-breakdown"></div>
+      </section>
     </div>
+
+    <div class="dashboard-grid action-grid">
+      <section class="panel attention-panel">
+        <div class="panel-head enhanced-head"><div><h3>⚠️ Perlu Perhatian</h3><p>Order yang membutuhkan tindakan segera.</p></div><button class="mini-link" id="attentionAll">Lihat Semua ›</button></div>
+        <div id="attentionList" class="attention-list"></div>
+      </section>
+
+      <section class="panel deadline-dashboard-panel">
+        <div class="panel-head enhanced-head"><div><h3>🔔 Deadline Terdekat</h3><p>Prioritas pekerjaan yang belum selesai.</p></div><button class="mini-link" id="deadlineDashboardAll">Lihat Semua ›</button></div>
+        <div id="dashboardDeadlineList" class="deadline-dashboard-list"></div>
+      </section>
+
+      <section class="panel latest-panel">
+        <div class="panel-head enhanced-head"><div><h3>▣ Order Terbaru</h3><p>Order terakhir yang masuk ke sistem.</p></div><button class="mini-link" id="dashboardLatestAll">Lihat Semua ›</button></div>
+        <div id="dashboardLatestList" class="latest-dashboard-list"></div>
+      </section>
+    </div>
+
+    <section class="panel activity-panel">
+      <div class="panel-head enhanced-head"><div><h3>◷ Aktivitas Terbaru</h3><p>Ringkasan aktivitas yang berkaitan dengan order.</p></div><button class="mini-link" id="activityAll">Lihat Semua ›</button></div>
+      <div id="activityList" class="activity-list"></div>
+    </section>
   </section>
 
   <!-- SEMUA ORDER -->
