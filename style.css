@@ -1192,3 +1192,261 @@ body{background:linear-gradient(180deg,#f8fbff 0%,#f3f7fb 100%)}
   top: auto;
   z-index: 3;
 }
+/* =========================================================
+   KWITANSI AXENTRA PRIMA AKSARA
+   Ukuran fisik: 21,5 × 7,5 cm
+   Bagian ini hanya mengatur halaman / komponen kwitansi.
+   ========================================================= */
+
+.receipt-type-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.04em;
+  background:#edf5ff;
+  color:#2477df;
+}
+.receipt-type-badge.dp{background:#fff6df;color:#b7791f}
+.receipt-type-badge.lunas{background:#eaf8f1;color:#16845b}
+
+/* =========================================================
+   TEMPLATE CETAK 21,5 × 7,5 CM
+   ========================================================= */
+.receipt-paper{
+  width:21.5cm;
+  height:7.5cm;
+  box-sizing:border-box;
+  position:relative;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid #d8e2ec;
+  padding:.34cm .48cm .24cm;
+  color:var(--text);
+  font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
+}
+.receipt-header{
+  height:.95cm;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.35cm;
+}
+.receipt-brand{display:flex;align-items:center;gap:.18cm;min-width:0}
+.receipt-logo{width:.82cm;height:.82cm;object-fit:contain;flex:0 0 auto}
+.receipt-company{display:flex;flex-direction:column;min-width:0}
+.receipt-company strong{font-size:10.5px;line-height:1.1;letter-spacing:.035em;color:var(--navy)}
+.receipt-company span{margin-top:2px;font-size:5.7px;font-weight:700;letter-spacing:.07em;color:var(--muted);white-space:nowrap}
+.receipt-title{text-align:right;flex:0 0 4.2cm}
+.receipt-title>span{display:block;color:var(--gold);font-size:5.8px;font-weight:800;letter-spacing:.13em}
+.receipt-title h2{margin:2px 0 1px;font-size:15px;line-height:1;color:var(--navy);letter-spacing:.1em}
+.receipt-title strong{display:block;color:var(--blue);font-size:7.2px;letter-spacing:.03em}
+.receipt-title em{display:block;margin-top:2px;color:#718096;font-size:5.7px;font-style:normal;font-weight:700}
+.receipt-divider{height:1px;background:linear-gradient(90deg,var(--navy),#dce5ee 72%,var(--gold));margin:.08cm 0 .14cm}
+.receipt-main{height:4.05cm;display:grid;grid-template-columns:minmax(0,1fr) 4.9cm;gap:.34cm;min-width:0}
+.receipt-info{display:flex;flex-direction:column;justify-content:center;gap:.055cm;min-width:0}
+.receipt-info-row{display:grid;grid-template-columns:3.15cm .25cm minmax(0,1fr);align-items:center;min-height:.42cm}
+.receipt-info-row span{color:#6b7e91;font-size:6.8px;font-weight:650}
+.receipt-info-row>b{color:#a0aec0;font-size:6.8px}
+.receipt-info-row>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--navy);font-size:7.4px;font-weight:750}
+.receipt-amount{font-size:9px!important}
+.receipt-balance{color:var(--gold)!important;font-size:8px!important}
+.receipt-side{display:flex;flex-direction:column;justify-content:center;gap:.15cm;min-width:0}
+.receipt-qr-card{display:flex;align-items:center;gap:.14cm;padding:.12cm;border:1px solid #e1e8ef;border-radius:8px;background:#f8fafc}
+.receipt-qr{width:1.18cm;height:1.18cm;display:grid;place-items:center;overflow:hidden;flex:0 0 1.18cm;background:#fff;border:1px solid #e2e8f0;border-radius:4px}
+.receipt-qr img,.receipt-qr canvas{width:1.18cm!important;height:1.18cm!important;display:block}
+.receipt-qr-card>div:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.receipt-qr-card strong{font-size:6.3px;color:var(--navy);letter-spacing:.06em}
+.receipt-qr-card span{font-size:5.3px;line-height:1.25;color:var(--muted)}
+.qr-fallback{font-size:8px;font-weight:900;color:var(--navy)}
+.receipt-authority{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:1.7cm}
+.receipt-authority>span{font-size:5.5px;color:#718096}
+.receipt-authority>strong{margin-top:1px;font-size:6px;color:#718096}
+.receipt-stamp{width:1.15cm;height:.63cm;object-fit:contain;margin:0}
+.receipt-authority>b{font-size:5.4px;letter-spacing:.045em;color:var(--navy)}
+.receipt-bottomline{position:absolute;left:.48cm;right:.48cm;bottom:.36cm;height:1px;background:#e4eaf1}
+.receipt-footer-note{position:absolute;left:.48cm;bottom:.13cm;color:#9aa8b6;font-size:4.6px}
+
+/* =========================================================
+   TABEL KWITANSI
+   ========================================================= */
+#receiptsPage .panel{overflow:hidden}
+#receiptsPage .table-wrap{overflow-x:auto}
+#receiptsPage table{min-width:1220px}
+#receiptsPage th,#receiptsPage td{white-space:nowrap}
+#receiptsPage .section-head{margin-bottom:20px}
+.receipt-view-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:78px;height:31px;padding:0 10px;border:1px solid #dbe4ed;border-radius:8px;background:#fff;color:var(--blue);font-size:11px;font-weight:800;transition:.2s}
+.receipt-view-btn:hover{border-color:#b8cce3;background:var(--blue-soft);transform:translateY(-1px)}
+.receipt-view-btn span{font-size:12px}
+
+/* =========================================================
+   PREVIEW KWITANSI
+   ========================================================= */
+body.receipt-modal-open{overflow:hidden}
+.receipt-modal-backdrop{position:fixed;inset:0;z-index:1000;padding:22px;display:flex;align-items:center;justify-content:center;background:rgba(9,24,39,.74);backdrop-filter:blur(7px)}
+.receipt-view-modal{width:min(1220px,100%);height:min(720px,calc(100vh - 44px));display:flex;flex-direction:column;overflow:hidden;background:#f4f7fb;border:1px solid rgba(255,255,255,.25);border-radius:22px;box-shadow:0 30px 100px rgba(0,0,0,.35)}
+.receipt-view-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 22px;background:#fff;border-bottom:1px solid var(--border)}
+.receipt-view-eyebrow{display:block;margin-bottom:3px;color:var(--blue);font-size:9px;font-weight:850;letter-spacing:.13em}
+.receipt-view-head h3{font-size:19px;color:var(--navy);line-height:1.1}
+.receipt-view-head p{margin-top:3px;color:var(--muted);font-size:11px}
+.receipt-view-close{width:38px;height:38px;border:1px solid var(--border);border-radius:11px;background:#fff;color:#66788a;font-size:24px;line-height:1}
+.receipt-view-close:hover{background:#f7fafc;color:var(--navy)}
+.receipt-view-body{min-height:0;flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:25px;background:linear-gradient(135deg,#eaf1f7,#f9fbfd 52%,#eaf1f7)}
+.receipt-preview-shell{width:100%;display:flex;justify-content:center;align-items:center}
+.receipt-preview-paper{position:relative;width:min(1080px,100%);aspect-ratio:21.5 / 7.5;box-sizing:border-box;overflow:hidden;background:#fff;border:1px solid #d7e1eb;border-radius:5px;box-shadow:0 18px 50px rgba(16,42,67,.15);padding:27px 36px 23px;color:var(--text)}
+.receipt-preview-topline{position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--navy),var(--blue) 58%,var(--gold))}
+.receipt-preview-header{display:flex;align-items:center;justify-content:space-between;gap:28px}
+.receipt-preview-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.receipt-preview-logo-wrap{width:55px;height:55px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #e0e7ee;border-radius:13px;background:#fff;box-shadow:0 5px 14px rgba(16,42,67,.05)}
+.receipt-preview-logo{width:44px;height:44px;object-fit:contain}
+.receipt-preview-company{display:flex;flex-direction:column;gap:3px;min-width:0}
+.receipt-preview-company strong{color:var(--navy);font-size:16px;letter-spacing:.035em;line-height:1.1}
+.receipt-preview-company span{color:#65798c;font-size:8px;font-weight:750;letter-spacing:.08em;white-space:nowrap}
+.receipt-preview-company small{color:#9aa8b6;font-size:6.7px;font-weight:700;letter-spacing:.04em}
+.receipt-preview-title{text-align:right;flex:0 0 205px}
+.receipt-preview-title>span{display:block;color:var(--gold);font-size:7px;font-weight:850;letter-spacing:.14em}
+.receipt-preview-title h2{margin:3px 0 3px;color:var(--navy);font-size:24px;line-height:1;letter-spacing:.09em}
+.receipt-preview-title>strong{display:block;color:var(--blue);font-size:10px;letter-spacing:.035em}
+.receipt-preview-title em{display:block;margin-top:3px;color:#718096;font-size:7px;font-style:normal;font-weight:750}
+.receipt-preview-divider{height:1px;margin:18px 0 15px;background:linear-gradient(90deg,#d9e3ec,#d9e3ec 72%,transparent)}
+.receipt-preview-content{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:34px;height:calc(100% - 103px);min-width:0}
+.receipt-preview-info{display:flex;flex-direction:column;justify-content:center;gap:9px;min-width:0}
+.receipt-preview-row{display:grid;grid-template-columns:150px 16px minmax(0,1fr);align-items:center;min-height:23px}
+.receipt-preview-row>span{color:#718096;font-size:10px;font-weight:650}
+.receipt-preview-row>b{color:#a0aec0;font-size:10px}
+.receipt-preview-row>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--navy);font-size:11px;font-weight:750}
+.receipt-preview-money{font-size:14px!important}
+.receipt-preview-balance{color:var(--gold)!important;font-size:12px!important}
+.receipt-preview-side{display:flex;flex-direction:column;justify-content:center;gap:13px;min-width:0}
+.receipt-preview-verified{display:flex;align-items:center;gap:11px;padding:11px;border:1px solid #e0e7ee;border-radius:11px;background:#f8fafc}
+.receipt-preview-qr{width:76px;height:76px;display:grid;place-items:center;flex:0 0 76px;overflow:hidden;background:#fff;border:1px solid #e1e8ef;border-radius:6px}
+.receipt-preview-qr img,.receipt-preview-qr canvas{width:76px!important;height:76px!important;display:block}
+.receipt-preview-verified>div:last-child{display:flex;flex-direction:column;gap:4px;min-width:0}
+.receipt-preview-verified strong{color:var(--navy);font-size:8px;letter-spacing:.08em}
+.receipt-preview-verified span{color:var(--muted);font-size:7px;line-height:1.35}
+.receipt-preview-sign{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:95px;text-align:center}
+.receipt-preview-sign>span{color:#718096;font-size:7px}
+.receipt-preview-sign>strong{margin-top:3px;color:#718096;font-size:8px}
+.receipt-preview-sign img{width:95px;height:52px;object-fit:contain;margin:0}
+.receipt-preview-sign>b{color:var(--navy);font-size:7px;letter-spacing:.055em}
+.receipt-preview-bottomline{position:absolute;left:36px;right:36px;bottom:21px;height:1px;background:#e4eaf1}
+.receipt-preview-note{position:absolute;left:36px;bottom:7px;color:#9aa8b6;font-size:6px}
+.receipt-view-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 20px;background:#fff;border-top:1px solid var(--border)}
+.receipt-view-meta{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px}
+.receipt-view-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.receipt-view-actions{display:flex;align-items:center;gap:8px}
+.receipt-print-btn{min-width:155px}
+
+/* =========================================================
+   PRINT
+   ========================================================= */
+#receiptPrintArea{position:fixed;left:-99999px;top:0;background:#fff}
+#receiptPrintArea.hidden{display:none!important}
+@media print{
+  @page{size:21.5cm 7.5cm;margin:0}
+  html,body{width:21.5cm!important;height:7.5cm!important;margin:0!important;padding:0!important;background:#fff!important}
+  body *{visibility:hidden!important}
+  #receiptPrintArea, #receiptPrintArea *{visibility:visible!important}
+  #receiptPrintArea{display:block!important;position:absolute!important;left:0!important;top:0!important;width:21.5cm!important;height:7.5cm!important;margin:0!important;padding:0!important;background:#fff!important}
+  #receiptPrintArea .receipt-paper{display:flex!important;width:21.5cm!important;height:7.5cm!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+}
+
+/* =========================================================
+   RESPONSIVE KWITANSI
+   ========================================================= */
+@media(max-width:900px){
+  .receipt-modal-backdrop{padding:12px}
+  .receipt-view-modal{height:calc(100vh - 24px)}
+  .receipt-view-body{padding:18px 12px}
+  .receipt-preview-paper{padding:22px 25px 19px}
+  .receipt-preview-content{grid-template-columns:minmax(0,1fr) 225px;gap:20px}
+  .receipt-preview-row{grid-template-columns:125px 14px minmax(0,1fr)}
+  .receipt-preview-company strong{font-size:13px}
+  .receipt-preview-company span{font-size:7px}
+  .receipt-preview-title h2{font-size:20px}
+}
+@media(max-width:680px){
+  .receipt-view-head{padding:14px 16px}
+  .receipt-view-body{padding:12px 8px;align-items:flex-start}
+  .receipt-preview-paper{width:100%;aspect-ratio:auto;min-height:610px;padding:21px}
+  .receipt-preview-header{align-items:flex-start}
+  .receipt-preview-logo-wrap{width:46px;height:46px}
+  .receipt-preview-logo{width:37px;height:37px}
+  .receipt-preview-company strong{font-size:10px}
+  .receipt-preview-company span{font-size:6px}
+  .receipt-preview-company small{font-size:5px}
+  .receipt-preview-title{flex-basis:125px}
+  .receipt-preview-title h2{font-size:17px}
+  .receipt-preview-title>strong{font-size:8px}
+  .receipt-preview-content{grid-template-columns:1fr;height:auto}
+  .receipt-preview-side{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:end}
+  .receipt-preview-row{grid-template-columns:112px 13px minmax(0,1fr)}
+  .receipt-preview-row>span{font-size:9px}
+  .receipt-preview-row>strong{font-size:10px}
+  .receipt-preview-qr{width:55px;height:55px;flex-basis:55px}
+  .receipt-preview-qr img,.receipt-preview-qr canvas{width:55px!important;height:55px!important}
+  .receipt-view-foot{flex-direction:column;align-items:stretch;padding:11px 14px}
+  .receipt-view-actions{width:100%}
+  .receipt-view-actions button{flex:1}
+}
+@media(max-width:480px){
+  .receipt-preview-side{grid-template-columns:1fr}
+  .receipt-preview-sign{min-height:90px}
+}
+
+/* FINAL FIX - PREVIEW KWITANSI */
+.receipt-modal-backdrop.hidden{
+  display:none !important;
+}
+.receipt-modal-backdrop:not(.hidden){
+  display:flex !important;
+}
+/* =========================================================
+   PDF DOWNLOAD KWITANSI
+   ========================================================= */
+
+#receiptPrintArea{
+  position:fixed;
+  left:-99999px;
+  top:0;
+  width:215mm;
+  height:75mm;
+  background:#fff;
+  overflow:hidden;
+}
+
+#receiptPrintArea.hidden{
+  display:none !important;
+}
+
+#receiptPrintArea .receipt-paper{
+  width:215mm !important;
+  height:75mm !important;
+  margin:0 !important;
+  overflow:hidden !important;
+  background:#fff !important;
+}
+
+/* =========================================================
+   PDF EXPORT TEMPORARY RENDER AREA
+   ========================================================= */
+#receiptPdfTempHost{
+  position:fixed !important;
+  left:0 !important;
+  top:0 !important;
+  width:215mm !important;
+  height:75mm !important;
+  overflow:hidden !important;
+  background:#fff !important;
+  pointer-events:none !important;
+  z-index:2147483647 !important;
+}
+#receiptPdfTempHost .receipt-paper{
+  width:215mm !important;
+  height:75mm !important;
+  margin:0 !important;
+  overflow:hidden !important;
+  background:#fff !important;
+}

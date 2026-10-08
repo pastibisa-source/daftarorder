@@ -66,6 +66,8 @@ const deadline = document.getElementById("deadline");
 const harga = document.getElementById("harga");
 const dp = document.getElementById("dp");
 const pembayaran = document.getElementById("pembayaran");
+const tanggalPembayaran =
+  document.getElementById("tanggalPembayaran");
 const status = document.getElementById("status");
 const keterangan = document.getElementById("keterangan");
 
@@ -147,7 +149,23 @@ function formatDeadline(value) {
   }).format(date);
 
 }
+/* =========================================================
+   6B. FORMAT TANGGAL SAJA
+   ========================================================= */
 
+function formatDateOnly(date) {
+
+  if (!date || isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+
+}
 
 /* =========================================================
    7. FORMAT DATETIME LOCAL
@@ -524,6 +542,7 @@ async function loadOrders() {
 
 orders = data || [];
 
+syncDPReceiptLedger();
 
 renderOrders();
 
@@ -576,7 +595,23 @@ orderForm.addEventListener(
 
       return;
     }
+const dpAmount = Number(dp.value || 0);
 
+    const hasPayment =
+      pembayaran.value === "Sudah Bayar" ||
+      dpAmount > 0;
+
+    if (hasPayment && !tanggalPembayaran.value) {
+
+      showToast(
+        "Tanggal pembayaran wajib diisi jika ada DP atau pembayaran lunas.",
+        true
+      );
+
+      tanggalPembayaran.focus();
+
+      return;
+    }
 
     const payload = {
 
@@ -596,13 +631,17 @@ orderForm.addEventListener(
           harga.value || 0
         ),
 
-      dp:
-        Number(
-          dp.value || 0
-        ),
+      dp: dpAmount,
 
       pembayaran:
         pembayaran.value,
+
+      tanggal_pembayaran:
+        hasPayment && tanggalPembayaran.value
+          ? new Date(
+              tanggalPembayaran.value
+            ).toISOString()
+          : null,
 
       status:
         status.value,
@@ -1459,6 +1498,8 @@ function openNewOrder() {
   pembayaran.value =
     "Belum Bayar";
 
+  tanggalPembayaran.value = "";
+
   status.value =
     "Belum Selesai";
 
@@ -1570,6 +1611,11 @@ function editOrder(id) {
   pembayaran.value =
     order.pembayaran ||
     "Belum Bayar";
+
+  tanggalPembayaran.value =
+    toLocalInputValue(
+      order.tanggal_pembayaran
+    );
 
 
   status.value =
@@ -1778,6 +1824,854 @@ mobileMenu.addEventListener(
 
   }
 );
+/* =========================================================
+   36B. KWITANSI
+   ========================================================= */
+
+const receiptsPage =
+  document.getElementById("receiptsPage");
+
+const receiptBody =
+  document.getElementById("receiptBody");
+
+const receiptCount =
+  document.getElementById("receiptCount");
+
+const receiptEmptyState =
+  document.getElementById("receiptEmptyState");
+
+const receiptMonthFilter =
+  document.getElementById("receiptMonthFilter");
+
+const receiptYearFilter =
+  document.getElementById("receiptYearFilter");
+
+const RECEIPT_LEDGER_KEY =
+  "axentra_receipt_ledger_v2";
+
+function getRomanMonth(month) {
+  const romanMonths = [
+    "I","II","III","IV","V","VI",
+    "VII","VIII","IX","X","XI","XII"
+  ];
+  return romanMonths[month - 1] || "";
+}
+
+function getReceiptLedger() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(RECEIPT_LEDGER_KEY) || "{}"
+    );
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveReceiptLedger(ledger) {
+  try {
+    localStorage.setItem(
+      RECEIPT_LEDGER_KEY,
+      JSON.stringify(ledger)
+    );
+  } catch (error) {
+    console.warn("Ledger kwitansi tidak dapat disimpan.", error);
+  }
+}
+
+function getReceiptLedgerKey(orderId, type) {
+  return `${orderId}:${type}`;
+}
+
+function getReceiptSequenceValues() {
+  const values = [];
+  const ledger = getReceiptLedger();
+
+  Object.values(ledger).forEach(function (item) {
+    const match = String(item?.number || "").match(/^(\d+)\//);
+    if (match) values.push(Number(match[1]));
+  });
+
+  orders.forEach(function (order) {
+    const match = String(order.nomor_kwitansi || "").match(/^(\d+)\//);
+    if (match) values.push(Number(match[1]));
+  });
+
+  return values;
+}
+
+function getNextReceiptNumber() {
+  const values = getReceiptSequenceValues();
+  return values.length ? Math.max(...values) + 1 : 1;
+}
+
+function buildReceiptNumber(dateValue, sequence) {
+  const date = new Date(dateValue);
+  const month = getRomanMonth(date.getMonth() + 1);
+  const year = date.getFullYear();
+
+  return `${String(sequence).padStart(3, "0")}/INV/APA/${month}/${year}`;
+}
+
+function syncDPReceiptLedger() {
+  const ledger = getReceiptLedger();
+  let changed = false;
+
+  orders.forEach(function (order) {
+    const dpAmount = Number(order.dp || 0);
+    const paymentDate = order.tanggal_pembayaran || null;
+
+    if (dpAmount > 0 && paymentDate && order.pembayaran !== "Sudah Bayar") {
+      const key = getReceiptLedgerKey(order.id, "dp");
+      if (!ledger[key]?.date) {
+        ledger[key] = {
+          number: ledger[key]?.number || "",
+          date: paymentDate
+        };
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) saveReceiptLedger(ledger);
+}
+
+function getReceiptEntries() {
+  const ledger = getReceiptLedger();
+  const entries = [];
+  const month = receiptMonthFilter ? receiptMonthFilter.value : "";
+  const year = receiptYearFilter ? receiptYearFilter.value : "";
+
+  orders.forEach(function (order) {
+    const dpAmount = Number(order.dp || 0);
+    const isPaid = order.pembayaran === "Sudah Bayar";
+    const currentPaymentDate = order.tanggal_pembayaran || null;
+
+    /*
+       DP selalu mempunyai kwitansi sendiri.
+       Jika order sudah lunas, snapshot tanggal DP dari ledger
+       tetap dipertahankan agar kwitansi DP tidak hilang.
+    */
+    if (dpAmount > 0) {
+      const dpKey = getReceiptLedgerKey(order.id, "dp");
+      let dpLedger = ledger[dpKey];
+
+      if (!dpLedger && currentPaymentDate) {
+        dpLedger = {
+          date: currentPaymentDate,
+          number: ""
+        };
+        ledger[dpKey] = dpLedger;
+      }
+
+      const dpDate = dpLedger?.date || currentPaymentDate;
+
+      if (dpDate) {
+        const date = new Date(dpDate);
+        const matchesMonth = !month || date.getMonth() + 1 === Number(month);
+        const matchesYear = !year || date.getFullYear() === Number(year);
+
+        if (matchesMonth && matchesYear) {
+          entries.push({
+            order,
+            type: "DP",
+            key: dpKey,
+            date: dpDate,
+            total: Number(order.harga || 0),
+            dp: dpAmount,
+            remaining: Math.max(Number(order.harga || 0) - dpAmount, 0),
+            number: dpLedger?.number || ""
+          });
+        }
+      }
+    }
+
+    /*
+       Saat status menjadi Sudah Bayar, terbitkan kwitansi
+       pelunasan kedua. Kwitansi DP tetap tersimpan.
+    */
+    if (isPaid && currentPaymentDate) {
+      const date = new Date(currentPaymentDate);
+      const matchesMonth = !month || date.getMonth() + 1 === Number(month);
+      const matchesYear = !year || date.getFullYear() === Number(year);
+
+      if (matchesMonth && matchesYear) {
+        entries.push({
+          order,
+          type: "PELUNASAN",
+          key: getReceiptLedgerKey(order.id, "lunas"),
+          date: currentPaymentDate,
+          total: Number(order.harga || 0),
+          dp: dpAmount,
+          remaining: 0,
+          number: order.nomor_kwitansi || ""
+        });
+      }
+    }
+  });
+
+  saveReceiptLedger(ledger);
+  return entries;
+}
+
+function getReceiptQRText(entry) {
+  return [
+    "AXENTRA PRIMA AKSARA",
+    "KWITANSI PEMBAYARAN",
+    `Nomor: ${entry.number}`,
+    `Jenis: ${entry.type}`,
+    `Client: ${entry.order.client || "-"}`,
+    `Order: ${entry.order.nama_tugas || "-"}`,
+    `Total: ${rupiah(entry.total)}`,
+    `DP: ${rupiah(entry.dp)}`,
+    `Sisa: ${rupiah(entry.remaining)}`,
+    `Tanggal: ${formatDateOnly(new Date(entry.date))}`
+  ].join("\n");
+}
+
+function renderReceiptQR(element, entry) {
+  if (!element) return;
+
+  element.innerHTML = "";
+
+  if (typeof QRCode === "undefined") {
+    element.innerHTML = `<span class="qr-fallback">QR</span>`;
+    return;
+  }
+
+  new QRCode(element, {
+    text: getReceiptQRText(entry),
+    width: 92,
+    height: 92,
+    colorDark: "#102a43",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+async function ensureReceiptNumbers(entries) {
+  const ledger = getReceiptLedger();
+  let nextNumber = getNextReceiptNumber();
+  let changed = false;
+
+  for (const entry of entries) {
+    if (!entry.number) {
+      const number = buildReceiptNumber(entry.date, nextNumber++);
+      entry.number = number;
+
+      if (entry.type === "PELUNASAN") {
+        entry.order.nomor_kwitansi = number;
+        const result = await supabaseClient
+          .from("orders")
+          .update({ nomor_kwitansi: number })
+          .eq("id", entry.order.id);
+
+        if (result.error) {
+          console.warn("Nomor kwitansi lunas belum tersimpan di Supabase:", result.error.message);
+        }
+      } else {
+        ledger[entry.key] = {
+          number,
+          date: entry.date
+        };
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) saveReceiptLedger(ledger);
+  return entries;
+}
+
+async function renderReceipts() {
+  if (!receiptBody || !receiptCount) return;
+
+  let receiptEntries = getReceiptEntries();
+  receiptCount.textContent = `${receiptEntries.length} kwitansi`;
+
+  if (!receiptEntries.length) {
+    receiptBody.innerHTML = "";
+    receiptEmptyState.classList.remove("hidden");
+    return;
+  }
+
+  receiptEmptyState.classList.add("hidden");
+  receiptEntries = await ensureReceiptNumbers(receiptEntries);
+  receiptCount.textContent = `${receiptEntries.length} kwitansi`;
+
+  receiptBody.innerHTML = receiptEntries.map(function (entry) {
+    return `
+      <tr>
+        <td>
+          <strong>${escapeHtml(entry.number || "-")}</strong>
+        </td>
+        <td>
+          <span class="receipt-type-badge ${entry.type === "DP" ? "dp" : "lunas"}">
+            ${entry.type === "DP" ? "DP" : "PELUNASAN"}
+          </span>
+        </td>
+        <td>${escapeHtml(entry.order.client || "-")}</td>
+        <td>${escapeHtml(entry.order.nama_tugas || "-")}</td>
+        <td class="price">${rupiah(entry.total)}</td>
+        <td class="price">${rupiah(entry.dp)}</td>
+        <td class="price">${rupiah(entry.remaining)}</td>
+        <td>${formatDateOnly(new Date(entry.date))}</td>
+        <td>
+          <div class="actions">
+            <button
+              class="receipt-view-btn"
+              type="button"
+              title="Lihat Kwitansi"
+              data-receipt-id="${escapeHtml(String(entry.order.id))}"
+              data-receipt-type="${escapeHtml(entry.type)}"
+            >
+              <span>👁</span> Lihat
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function findReceiptEntry(orderId, type) {
+  return getReceiptEntries().find(function (entry) {
+    return String(entry.order.id) === String(orderId) && entry.type === type;
+  });
+}
+
+function viewReceipt(orderId, type) {
+
+  console.log("Membuka kwitansi:", orderId, type);
+
+  const modal = document.getElementById("receiptViewModal");
+
+  /* Buka modal TERLEBIH DAHULU.
+     Dengan cara ini, error pada data/QR tidak akan membuat
+     tombol Lihat seolah-olah tidak bekerja. */
+  if (!modal) {
+    console.error("receiptViewModal tidak ditemukan.");
+    showToast("Jendela preview kwitansi tidak ditemukan.", true);
+    return;
+  }
+
+  modal.classList.remove("hidden");
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("receipt-modal-open");
+
+  try {
+    const entry = findReceiptEntry(orderId, type);
+
+    if (!entry) {
+      console.error("Receipt entry tidak ditemukan:", { orderId, type });
+      showToast("Data kwitansi tidak ditemukan.", true);
+      return;
+    }
+
+    const ledger = getReceiptLedger();
+
+    if (!entry.number) {
+      entry.number = buildReceiptNumber(
+        entry.date,
+        getNextReceiptNumber()
+      );
+
+      if (entry.type === "DP") {
+        ledger[entry.key] = {
+          number: entry.number,
+          date: entry.date
+        };
+        saveReceiptLedger(ledger);
+      }
+    }
+
+    const paymentDate = new Date(entry.date);
+
+    const setText = function(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value ?? "-";
+    };
+
+    setText("previewReceiptNumber", entry.number || "-");
+    setText(
+      "previewReceiptType",
+      entry.type === "DP"
+        ? "KWITANSI UANG MUKA"
+        : "KWITANSI PELUNASAN"
+    );
+    setText("previewReceiptClient", entry.order.client || "-");
+    setText("previewReceiptOrder", entry.order.nama_tugas || "-");
+    setText("previewReceiptTotal", rupiah(entry.total));
+    setText("previewReceiptDP", rupiah(entry.dp));
+    setText("previewReceiptRemaining", rupiah(entry.remaining));
+    setText(
+      "previewReceiptDate",
+      formatDateOnly(paymentDate)
+    );
+    setText(
+      "previewReceiptLocation",
+      "Palembang, " + formatDateOnly(paymentDate)
+    );
+    setText(
+      "receiptViewSubtitle",
+      `${entry.order.client || "Client"} • ${entry.number || "-"}`
+    );
+
+    /* QR bersifat tambahan.
+       Jika library QR gagal, preview tetap terbuka. */
+    try {
+      renderReceiptQR(
+        document.getElementById("previewReceiptQR"),
+        entry
+      );
+    } catch (qrError) {
+      console.warn("QR preview gagal dibuat:", qrError);
+      const qr = document.getElementById("previewReceiptQR");
+      if (qr) qr.innerHTML = '<span class="qr-fallback">QR</span>';
+    }
+
+    window.currentReceiptEntry = entry;
+    window.currentReceiptOrderId = entry.order.id;
+
+  } catch (error) {
+    console.error("Error saat memuat preview kwitansi:", error);
+    showToast(
+      "Preview terbuka, tetapi sebagian data kwitansi gagal dimuat.",
+      true
+    );
+  }
+}
+window.viewReceipt = viewReceipt;
+function closeReceiptView() {
+  const modal = document.getElementById("receiptViewModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("receipt-modal-open");
+}
+
+async function printCurrentReceipt() {
+
+  const entry = window.currentReceiptEntry;
+
+  if (!entry) {
+    showToast("Data kwitansi belum tersedia.", true);
+    return;
+  }
+
+  /* =====================================================
+     CEK LIBRARY PDF
+     ===================================================== */
+
+  if (typeof window.html2canvas !== "function") {
+    showToast("html2canvas belum berhasil dimuat.", true);
+    console.error("html2canvas tidak tersedia.");
+    return;
+  }
+
+  if (!window.jspdf || typeof window.jspdf.jsPDF !== "function") {
+    showToast("jsPDF belum berhasil dimuat.", true);
+    console.error("window.jspdf.jsPDF tidak tersedia.");
+    return;
+  }
+
+  const printButton =
+    document.getElementById("printReceiptBtn");
+
+  if (printButton) {
+    printButton.disabled = true;
+    printButton.innerHTML = "⏳ Membuat PDF...";
+  }
+
+  let tempHost = null;
+
+  try {
+
+    /* =====================================================
+       ISI TEMPLATE KWITANSI
+       ===================================================== */
+
+    const paymentDate = new Date(entry.date);
+
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value ?? "-";
+    };
+
+    setText("receiptNumber", entry.number || "-");
+
+    setText(
+      "receiptType",
+      entry.type === "DP"
+        ? "KWITANSI UANG MUKA"
+        : "KWITANSI PELUNASAN"
+    );
+
+    setText(
+      "receiptClient",
+      entry.order?.client || "-"
+    );
+
+    setText(
+      "receiptOrder",
+      entry.order?.nama_tugas || "-"
+    );
+
+    setText(
+      "receiptTotal",
+      rupiah(entry.total)
+    );
+
+    setText(
+      "receiptDP",
+      rupiah(entry.dp)
+    );
+
+    setText(
+      "receiptRemaining",
+      rupiah(entry.remaining)
+    );
+
+    setText(
+      "receiptPaymentDate",
+      formatDateOnly(paymentDate)
+    );
+
+    setText(
+      "receiptLocationDate",
+      "Palembang, " +
+      formatDateOnly(paymentDate)
+    );
+
+    /* QR hanya tambahan; jangan sampai QR menggagalkan PDF. */
+    try {
+      renderReceiptQR(
+        document.getElementById("receiptQRCode"),
+        entry
+      );
+    } catch (qrError) {
+      console.warn(
+        "QR tidak berhasil dirender, PDF tetap dilanjutkan:",
+        qrError
+      );
+    }
+
+    /* =====================================================
+       AMBIL TEMPLATE
+       ===================================================== */
+
+    const printArea =
+      document.getElementById("receiptPrintArea");
+
+    if (!printArea) {
+      throw new Error(
+        "Elemen #receiptPrintArea tidak ditemukan."
+      );
+    }
+
+    const originalPaper =
+      printArea.querySelector(".receipt-paper");
+
+    if (!originalPaper) {
+      throw new Error(
+        "Elemen .receipt-paper tidak ditemukan."
+      );
+    }
+
+    /*
+      MASALAH VERSI SEBELUMNYA:
+      receiptPrintArea berada di left:-99999px.
+      html2canvas kadang gagal menangkap elemen
+      yang berada sangat jauh di luar viewport.
+
+      SOLUSI:
+      buat clone sementara di posisi normal viewport.
+    */
+
+    tempHost = document.createElement("div");
+
+    tempHost.id = "receiptPdfTempHostAutoPDF";
+
+    Object.assign(
+      tempHost.style,
+      {
+        position: "fixed",
+        left: "0",
+        top: "0",
+        width: "215mm",
+        height: "75mm",
+        background: "#ffffff",
+        zIndex: "2147483647",
+        overflow: "hidden",
+        pointerEvents: "none"
+      }
+    );
+
+    const clonedPaper =
+      originalPaper.cloneNode(true);
+
+    clonedPaper.removeAttribute("id");
+
+    Object.assign(
+      clonedPaper.style,
+      {
+        width: "215mm",
+        height: "75mm",
+        margin: "0",
+        borderRadius: "0",
+        boxShadow: "none",
+        overflow: "hidden",
+        background: "#ffffff"
+      }
+    );
+
+    tempHost.appendChild(clonedPaper);
+
+    document.body.appendChild(tempHost);
+
+    /* =====================================================
+       TUNGGU GAMBAR LOGO / CAP / QR
+       ===================================================== */
+
+    const images =
+      Array.from(
+        clonedPaper.querySelectorAll("img")
+      );
+
+    await Promise.all(
+      images.map(async (img) => {
+
+        try {
+
+          if (
+            typeof img.decode === "function"
+          ) {
+            await img.decode();
+          }
+
+        } catch (imageError) {
+
+          console.warn(
+            "Gambar tidak dapat di-decode:",
+            img.src,
+            imageError
+          );
+
+        }
+
+      })
+    );
+
+    /*
+      Beri waktu browser menghitung layout clone.
+    */
+    await new Promise(
+      resolve =>
+        requestAnimationFrame(
+          () =>
+            requestAnimationFrame(resolve)
+        )
+    );
+
+    /* =====================================================
+       HTML → CANVAS
+       ===================================================== */
+
+    const canvas =
+      await window.html2canvas(
+        clonedPaper,
+        {
+          scale: 3,
+          backgroundColor: "#ffffff",
+          useCORS: false,
+          allowTaint: false,
+          logging: false,
+          imageTimeout: 15000,
+          removeContainer: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: clonedPaper.scrollWidth,
+          windowHeight: clonedPaper.scrollHeight
+        }
+      );
+
+    if (
+      !canvas ||
+      !canvas.width ||
+      !canvas.height
+    ) {
+      throw new Error(
+        "Canvas kwitansi kosong."
+      );
+    }
+
+    /* =====================================================
+       BUAT PDF 21,5 × 7,5 CM
+       ===================================================== */
+
+    const pdf =
+      new window.jspdf.jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: [215, 75],
+        compress: true
+      });
+
+    let imageData;
+
+    try {
+      imageData = canvas.toDataURL("image/jpeg", 0.98);
+    } catch (canvasError) {
+      console.warn("Canvas ter-taint oleh gambar. Mencoba render ulang tanpa gambar eksternal:", canvasError);
+
+      const safeCanvas = await window.html2canvas(clonedPaper, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: false,
+        allowTaint: false,
+        logging: false,
+        imageTimeout: 15000,
+        removeContainer: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clonedPaper.scrollWidth,
+        windowHeight: clonedPaper.scrollHeight,
+        ignoreElements: (element) => element.tagName === "IMG"
+      });
+
+      imageData = safeCanvas.toDataURL("image/jpeg", 0.98);
+    }
+
+    pdf.addImage(
+      imageData,
+      "JPEG",
+      0,
+      0,
+      215,
+      75,
+      undefined,
+      "FAST"
+    );
+
+    /* =====================================================
+       NAMA FILE = NOMOR KWITANSI
+       ===================================================== */
+
+    const receiptNumber =
+      String(
+        entry.number || "kwitansi"
+      ).trim();
+
+    const safeFileName =
+      receiptNumber
+        .replace(
+          /[\/\\:*?"<>|]/g,
+          "-"
+        )
+        .replace(
+          /\s+/g,
+          "-"
+        );
+
+    const fileName =
+      `${safeFileName || "kwitansi"}.pdf`;
+
+    /* =====================================================
+       DOWNLOAD
+       ===================================================== */
+
+    pdf.save(fileName);
+
+    showToast(
+      `PDF berhasil diunduh: ${fileName}`
+    );
+
+  } catch (error) {
+
+    console.error(
+      "GAGAL MEMBUAT PDF KWITANSI:",
+      error
+    );
+
+    showToast(
+      "Gagal membuat PDF kwitansi. Silakan coba lagi.",
+      true
+    );
+
+  } finally {
+
+    if (tempHost) {
+      tempHost.remove();
+    }
+
+    if (printButton) {
+      printButton.disabled = false;
+      printButton.innerHTML =
+        "🖨 Cetak Kwitansi";
+    }
+
+  }
+}
+
+const closeReceiptViewBtn =
+  document.getElementById("closeReceiptView");
+const closeReceiptViewBottom =
+  document.getElementById("closeReceiptViewBottom");
+const printReceiptBtn =
+  document.getElementById("printReceiptBtn");
+document.addEventListener(
+  "click",
+  function (event) {
+    const button = event.target.closest(".receipt-view-btn");
+
+    if (!button) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const orderId = button.dataset.receiptId;
+    const receiptType = button.dataset.receiptType;
+
+    console.log(
+      "Tombol Lihat diklik:",
+      orderId,
+      receiptType
+    );
+
+    viewReceipt(orderId, receiptType);
+  }
+);
+
+if (closeReceiptViewBtn) closeReceiptViewBtn.addEventListener("click", closeReceiptView);
+if (closeReceiptViewBottom) closeReceiptViewBottom.addEventListener("click", closeReceiptView);
+if (printReceiptBtn) printReceiptBtn.addEventListener("click", printCurrentReceipt);
+
+
+const receiptViewModal = document.getElementById("receiptViewModal");
+if (receiptViewModal) {
+  receiptViewModal.addEventListener("click", function (event) {
+    if (event.target === receiptViewModal) closeReceiptView();
+  });
+}
+
+document.addEventListener("keydown", function (event) {
+  if (
+    event.key === "Escape" &&
+    receiptViewModal &&
+    !receiptViewModal.classList.contains("hidden")
+  ) {
+    closeReceiptView();
+  }
+});
+
+if (receiptMonthFilter) {
+  receiptMonthFilter.addEventListener("change", renderReceipts);
+}
+
+if (receiptYearFilter) {
+  receiptYearFilter.addEventListener("change", renderReceipts);
+}
 
 
 /* =========================================================
@@ -2983,11 +3877,28 @@ document.querySelectorAll(".nav button[data-page]").forEach(button=>{
     const dashboardPage=document.getElementById("dashboardPage");
     const ordersPage=document.getElementById("ordersPage");
     if(reportPage) reportPage.classList.add("hidden");
+    if(receiptsPage) receiptsPage.classList.add("hidden");
     dashboardPage.classList.toggle("hidden",page!=="dashboard");
     ordersPage.classList.toggle("hidden",page!=="orders");
-    document.getElementById("pageTitle").textContent=page==="dashboard"?"Dashboard":"Semua Order";
-    document.getElementById("pageSubtitle").textContent=page==="dashboard"?"Ringkasan aktivitas dan kondisi order Anda hari ini.":"Kelola, cari, filter, dan perbarui seluruh pesanan.";
-    if(page==="dashboard") renderDashboard();
+    receiptsPage.classList.toggle("hidden",page!=="receipts");
+document.getElementById("pageTitle").textContent =
+  page==="dashboard"
+    ? "Dashboard"
+    : page==="orders"
+      ? "Semua Order"
+      : page==="receipts"
+        ? "Kwitansi"
+        : "Laporan";
+document.getElementById("pageSubtitle").textContent =
+  page==="dashboard"
+    ? "Ringkasan aktivitas dan kondisi order Anda hari ini."
+    : page==="orders"
+      ? "Kelola, cari, filter, dan perbarui seluruh pesanan."
+      : page==="receipts"
+        ? "Kelola dan lihat seluruh kwitansi pembayaran."
+        : "Analisis order dan pendapatan berdasarkan periode.";
+        if(page==="dashboard") renderDashboard();
+        if(page==="receipts") renderReceipts();
     sidebar.classList.remove("open");
   });
 });
