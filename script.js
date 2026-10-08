@@ -2052,17 +2052,19 @@ function getReceiptQRText(entry) {
 }
 
 function renderReceiptQR(element, entry) {
-  if (!element) return;
+  if (!element || !entry) return;
 
   element.innerHTML = "";
 
   if (typeof QRCode === "undefined") {
-    element.innerHTML = `<span class="qr-fallback">QR</span>`;
+    console.error("QRCode.js tidak berhasil dimuat.");
     return;
   }
 
+  const qrText = getReceiptQRText(entry);
+
   new QRCode(element, {
-    text: getReceiptQRText(entry),
+    text: qrText,
     width: 92,
     height: 92,
     colorDark: "#102a43",
@@ -2070,7 +2072,6 @@ function renderReceiptQR(element, entry) {
     correctLevel: QRCode.CorrectLevel.M
   });
 }
-
 async function ensureReceiptNumbers(entries) {
   const ledger = getReceiptLedger();
   let nextNumber = getNextReceiptNumber();

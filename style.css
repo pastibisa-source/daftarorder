@@ -189,6 +189,17 @@
       display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     }
     .filterbar select{width:auto;min-width:145px;padding:9px 11px}
+.filterbar #receiptNumberFilter{
+  width:220px;
+  min-width:200px;
+  padding:9px 11px;
+}
+
+.filterbar #receiptNumberSort{
+  width:auto;
+  min-width:235px;
+  padding:9px 11px;
+}
     .filter-count{margin-left:auto;color:var(--muted);font-size:12px}
     .table-wrap{overflow-x:auto}
     table{width:100%;border-collapse:collapse;min-width:920px}
@@ -1260,7 +1271,36 @@ body{background:linear-gradient(180deg,#f8fbff 0%,#f3f7fb 100%)}
 .receipt-qr-card>div:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
 .receipt-qr-card strong{font-size:6.3px;color:var(--navy);letter-spacing:.06em}
 .receipt-qr-card span{font-size:5.3px;line-height:1.25;color:var(--muted)}
-.qr-fallback{font-size:8px;font-weight:900;color:var(--navy)}
+.receipt-code-text{
+  width:100%;
+  height:100%;
+  padding:3px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  gap:1px;
+  overflow:hidden;
+}
+
+.receipt-code-text strong{
+  font-size:5.5px;
+  font-weight:900;
+  color:var(--navy);
+  line-height:1.1;
+}
+
+.receipt-code-text span{
+  display:block;
+  width:100%;
+  font-size:4.5px;
+  line-height:1.1;
+  color:#526579;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .receipt-authority{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:1.7cm}
 .receipt-authority>span{font-size:5.5px;color:#718096}
 .receipt-authority>strong{margin-top:1px;font-size:6px;color:#718096}
@@ -1449,4 +1489,20 @@ body.receipt-modal-open{overflow:hidden}
   margin:0 !important;
   overflow:hidden !important;
   background:#fff !important;
+}
+
+/* FILTER NOMOR KWITANSI */
+@media(max-width:700px){
+  .filterbar #receiptNumberFilter{
+    width:100%;
+    min-width:0;
+  }
+}
+
+/* SORT NOMOR KWITANSI */
+@media(max-width:700px){
+  .filterbar #receiptNumberSort{
+    width:100%;
+    min-width:0;
+  }
 }
