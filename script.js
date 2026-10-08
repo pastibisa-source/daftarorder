@@ -3869,38 +3869,84 @@ function renderDashboardCharts(){
 /* =========================================================
    NAVIGATION
    ========================================================= */
-document.querySelectorAll(".nav button[data-page]").forEach(button=>{
-  button.addEventListener("click",function(){
-    document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+
+document.querySelectorAll(".nav button[data-page]").forEach(button => {
+
+  button.addEventListener("click", function () {
+
+    const page = button.dataset.page;
+
+    const dashboardPage = document.getElementById("dashboardPage");
+    const ordersPage = document.getElementById("ordersPage");
+    const receiptsPageEl = document.getElementById("receiptsPage");
+    const reportPageEl = document.getElementById("reportPage");
+    const pageTitleEl = document.getElementById("pageTitle");
+    const pageSubtitleEl = document.getElementById("pageSubtitle");
+
+    // Active menu
+    document
+      .querySelectorAll(".nav button")
+      .forEach(item => item.classList.remove("active"));
+
     button.classList.add("active");
-    const page=button.dataset.page;
-    const dashboardPage=document.getElementById("dashboardPage");
-    const ordersPage=document.getElementById("ordersPage");
-    if(reportPage) reportPage.classList.add("hidden");
-    if(receiptsPage) receiptsPage.classList.add("hidden");
-    dashboardPage.classList.toggle("hidden",page!=="dashboard");
-    ordersPage.classList.toggle("hidden",page!=="orders");
-    receiptsPage.classList.toggle("hidden",page!=="receipts");
-document.getElementById("pageTitle").textContent =
-  page==="dashboard"
-    ? "Dashboard"
-    : page==="orders"
-      ? "Semua Order"
-      : page==="receipts"
-        ? "Kwitansi"
-        : "Laporan";
-document.getElementById("pageSubtitle").textContent =
-  page==="dashboard"
-    ? "Ringkasan aktivitas dan kondisi order Anda hari ini."
-    : page==="orders"
-      ? "Kelola, cari, filter, dan perbarui seluruh pesanan."
-      : page==="receipts"
-        ? "Kelola dan lihat seluruh kwitansi pembayaran."
-        : "Analisis order dan pendapatan berdasarkan periode.";
-        if(page==="dashboard") renderDashboard();
-        if(page==="receipts") renderReceipts();
-    sidebar.classList.remove("open");
+
+    // Sembunyikan semua halaman
+    if (dashboardPage) dashboardPage.classList.add("hidden");
+    if (ordersPage) ordersPage.classList.add("hidden");
+    if (receiptsPageEl) receiptsPageEl.classList.add("hidden");
+    if (reportPageEl) reportPageEl.classList.add("hidden");
+
+    // Tampilkan halaman yang dipilih
+    if (page === "dashboard" && dashboardPage) {
+      dashboardPage.classList.remove("hidden");
+    }
+
+    if (page === "orders" && ordersPage) {
+      ordersPage.classList.remove("hidden");
+    }
+
+    if (page === "receipts" && receiptsPageEl) {
+      receiptsPageEl.classList.remove("hidden");
+    }
+
+    // Judul
+    if (pageTitleEl) {
+      pageTitleEl.textContent =
+        page === "dashboard"
+          ? "Dashboard"
+          : page === "orders"
+            ? "Semua Order"
+            : page === "receipts"
+              ? "Kwitansi"
+              : "Laporan";
+    }
+
+    if (pageSubtitleEl) {
+      pageSubtitleEl.textContent =
+        page === "dashboard"
+          ? "Ringkasan aktivitas dan kondisi order Anda hari ini."
+          : page === "orders"
+            ? "Kelola, cari, filter, dan perbarui seluruh pesanan."
+            : page === "receipts"
+              ? "Kelola dan lihat seluruh kwitansi pembayaran."
+              : "Analisis order dan pendapatan berdasarkan periode.";
+    }
+
+    // Render halaman
+    if (page === "dashboard") {
+      renderDashboard();
+    }
+
+    if (page === "receipts") {
+      renderReceipts();
+    }
+
+    if (sidebar) {
+      sidebar.classList.remove("open");
+    }
+
   });
+
 });
 
 /* =========================================================
