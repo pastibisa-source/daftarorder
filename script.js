@@ -1846,6 +1846,12 @@ const receiptMonthFilter =
 const receiptYearFilter =
   document.getElementById("receiptYearFilter");
 
+const receiptNumberFilter =
+  document.getElementById("receiptNumberFilter");
+
+const receiptNumberSort =
+  document.getElementById("receiptNumberSort");
+
 const RECEIPT_LEDGER_KEY =
   "axentra_receipt_ledger_v2";
 
@@ -1940,6 +1946,9 @@ function getReceiptEntries() {
   const entries = [];
   const month = receiptMonthFilter ? receiptMonthFilter.value : "";
   const year = receiptYearFilter ? receiptYearFilter.value : "";
+  const numberSearch = receiptNumberFilter
+    ? receiptNumberFilter.value.trim().toLowerCase()
+    : "";
 
   orders.forEach(function (order) {
     const dpAmount = Number(order.dp || 0);
@@ -2010,7 +2019,21 @@ function getReceiptEntries() {
   });
 
   saveReceiptLedger(ledger);
+
+  if (numberSearch) {
+    return entries.filter(function (entry) {
+      return String(entry.number || "")
+        .toLowerCase()
+        .includes(numberSearch);
+    });
+  }
+
   return entries;
+}
+
+function getReceiptSequenceNumber(entry) {
+  const match = String(entry?.number || "").match(/^(\d+)\//);
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
 }
 
 function getReceiptQRText(entry) {
@@ -2096,6 +2119,19 @@ async function renderReceipts() {
 
   receiptEmptyState.classList.add("hidden");
   receiptEntries = await ensureReceiptNumbers(receiptEntries);
+
+  const sortMode = receiptNumberSort
+    ? receiptNumberSort.value
+    : "asc";
+
+  receiptEntries.sort(function (a, b) {
+    const numberA = getReceiptSequenceNumber(a);
+    const numberB = getReceiptSequenceNumber(b);
+    return sortMode === "desc"
+      ? numberB - numberA
+      : numberA - numberB;
+  });
+
   receiptCount.textContent = `${receiptEntries.length} kwitansi`;
 
   receiptBody.innerHTML = receiptEntries.map(function (entry) {
@@ -2671,6 +2707,14 @@ if (receiptMonthFilter) {
 
 if (receiptYearFilter) {
   receiptYearFilter.addEventListener("change", renderReceipts);
+}
+
+if (receiptNumberFilter) {
+  receiptNumberFilter.addEventListener("input", renderReceipts);
+}
+
+if (receiptNumberSort) {
+  receiptNumberSort.addEventListener("change", renderReceipts);
 }
 
 
@@ -3977,15 +4021,14 @@ if (navReport) {
       navReport.classList.add(
         "active"
       );
+const dashboardPage = document.getElementById("dashboardPage");
+const ordersPage = document.getElementById("ordersPage");
+const receiptsPage = document.getElementById("receiptsPage");
 
-
-      const dashboardPage = document.getElementById("dashboardPage");
-      const ordersPage = document.getElementById("ordersPage");
-      if (dashboardPage) dashboardPage.classList.add("hidden");
-      if (ordersPage) ordersPage.classList.add("hidden");
-      if (reportPage) reportPage.classList.remove("hidden");
-
-
+if (dashboardPage) dashboardPage.classList.add("hidden");
+if (ordersPage) ordersPage.classList.add("hidden");
+if (receiptsPage) receiptsPage.classList.add("hidden");
+if (reportPage) reportPage.classList.remove("hidden");
       document.getElementById("pageTitle").textContent = "Laporan";
       document.getElementById("pageSubtitle").textContent = "Analisis order dan pendapatan berdasarkan periode.";
 
