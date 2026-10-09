@@ -2052,19 +2052,17 @@ function getReceiptQRText(entry) {
 }
 
 function renderReceiptQR(element, entry) {
-  if (!element || !entry) return;
+  if (!element) return;
 
   element.innerHTML = "";
 
   if (typeof QRCode === "undefined") {
-    console.error("QRCode.js tidak berhasil dimuat.");
+    element.innerHTML = `<span class="qr-fallback">QR</span>`;
     return;
   }
 
-  const qrText = getReceiptQRText(entry);
-
   new QRCode(element, {
-    text: qrText,
+    text: getReceiptQRText(entry),
     width: 92,
     height: 92,
     colorDark: "#102a43",
@@ -2072,6 +2070,7 @@ function renderReceiptQR(element, entry) {
     correctLevel: QRCode.CorrectLevel.M
   });
 }
+
 async function ensureReceiptNumbers(entries) {
   const ledger = getReceiptLedger();
   let nextNumber = getNextReceiptNumber();
@@ -3924,6 +3923,7 @@ document.querySelectorAll(".nav button[data-page]").forEach(button => {
     const dashboardPage = document.getElementById("dashboardPage");
     const ordersPage = document.getElementById("ordersPage");
     const receiptsPageEl = document.getElementById("receiptsPage");
+    const invoicesPageEl = document.getElementById("invoicesPage");
     const reportPageEl = document.getElementById("reportPage");
     const pageTitleEl = document.getElementById("pageTitle");
     const pageSubtitleEl = document.getElementById("pageSubtitle");
@@ -3939,6 +3939,7 @@ document.querySelectorAll(".nav button[data-page]").forEach(button => {
     if (dashboardPage) dashboardPage.classList.add("hidden");
     if (ordersPage) ordersPage.classList.add("hidden");
     if (receiptsPageEl) receiptsPageEl.classList.add("hidden");
+    if (invoicesPageEl) invoicesPageEl.classList.add("hidden");
     if (reportPageEl) reportPageEl.classList.add("hidden");
 
     // Tampilkan halaman yang dipilih
@@ -3953,6 +3954,9 @@ document.querySelectorAll(".nav button[data-page]").forEach(button => {
     if (page === "receipts" && receiptsPageEl) {
       receiptsPageEl.classList.remove("hidden");
     }
+    if (page === "invoices" && invoicesPageEl) {
+      invoicesPageEl.classList.remove("hidden");
+    }
 
     // Judul
     if (pageTitleEl) {
@@ -3963,7 +3967,9 @@ document.querySelectorAll(".nav button[data-page]").forEach(button => {
             ? "Semua Order"
             : page === "receipts"
               ? "Kwitansi"
-              : "Laporan";
+              : page === "invoices"
+                ? "Invoice"
+                : "Laporan";
     }
 
     if (pageSubtitleEl) {
@@ -3974,7 +3980,9 @@ document.querySelectorAll(".nav button[data-page]").forEach(button => {
             ? "Kelola, cari, filter, dan perbarui seluruh pesanan."
             : page === "receipts"
               ? "Kelola dan lihat seluruh kwitansi pembayaran."
-              : "Analisis order dan pendapatan berdasarkan periode.";
+              : page === "invoices"
+                ? "Kelola invoice, rincian layanan, dan riwayat pembayaran."
+                : "Analisis order dan pendapatan berdasarkan periode.";
     }
 
     // Render halaman
@@ -3984,6 +3992,9 @@ document.querySelectorAll(".nav button[data-page]").forEach(button => {
 
     if (page === "receipts") {
       renderReceipts();
+    }
+    if (page === "invoices") {
+      loadInvoiceRecords();
     }
 
     if (sidebar) {
@@ -4022,14 +4033,16 @@ if (navReport) {
       navReport.classList.add(
         "active"
       );
-const dashboardPage = document.getElementById("dashboardPage");
-const ordersPage = document.getElementById("ordersPage");
-const receiptsPage = document.getElementById("receiptsPage");
 
-if (dashboardPage) dashboardPage.classList.add("hidden");
-if (ordersPage) ordersPage.classList.add("hidden");
-if (receiptsPage) receiptsPage.classList.add("hidden");
-if (reportPage) reportPage.classList.remove("hidden");
+
+      const dashboardPage = document.getElementById("dashboardPage");
+      const ordersPage = document.getElementById("ordersPage");
+      if (dashboardPage) dashboardPage.classList.add("hidden");
+      if (ordersPage) ordersPage.classList.add("hidden");
+      document.getElementById("invoicesPage")?.classList.add("hidden");
+      if (reportPage) reportPage.classList.remove("hidden");
+
+
       document.getElementById("pageTitle").textContent = "Laporan";
       document.getElementById("pageSubtitle").textContent = "Analisis order dan pendapatan berdasarkan periode.";
 
@@ -4711,4 +4724,334 @@ function renderAttention(){
   });
 
   window.addEventListener('resize',()=>{if(!document.getElementById('dashboardPage')?.classList.contains('hidden')){clearTimeout(window.axResize);window.axResize=setTimeout(renderDashboardCharts,180);}});
+})();
+
+
+/* =========================================================
+   INVOICE MANAGER v1 - Supabase invoices, items, payments
+   ========================================================= */
+(function initInvoiceManager(){
+  const $ = (id) => document.getElementById(id);
+  const invoiceState = { records: [], activePreviewId: null, activePaymentId: null, editingId: null };
+  const money = (n) => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(n||0)).replace(/\u00a0/g,' ');
+  const dateOnly = (v) => { if(!v) return '-'; const d=new Date(v+'T00:00:00'); return Number.isNaN(d.getTime())?String(v):new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'long',year:'numeric'}).format(d); };
+  const dateTimeLocalNow = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); };
+  const safeText = (v) => (typeof escapeHtml==='function' ? escapeHtml(String(v??'')) : String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+  const toast = (m,err=false) => { if(typeof showToast==='function') showToast(m,err); else alert(m); };
+  const monthRoman = (m) => ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][m-1]||'I';
+  async function generateInvoiceNumber(dateValue){
+    const d = dateValue ? new Date(dateValue + 'T00:00:00') : new Date();
+    const yyyy = d.getFullYear();
+    const roman = monthRoman(d.getMonth() + 1);
+
+    // Nomor urut berlaku untuk seluruh tahun, bukan diulang setiap bulan.
+    // Contoh: 001/INV/APA/IX/2026, 002/INV/APA/X/2026, 003/INV/APA/XI/2026.
+    const { data, error } = await supabaseClient
+      .from('invoices')
+      .select('invoice_number')
+      .like('invoice_number', `%/${yyyy}`);
+
+    if (error) throw error;
+
+    let max = 0;
+    (data || []).forEach(row => {
+      const match = String(row.invoice_number || '')
+        .match(/^(\d+)\/INV\/APA\/(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)\/(\d{4})$/);
+      if (match && Number(match[3]) === yyyy) {
+        max = Math.max(max, Number(match[1]));
+      }
+    });
+
+    return `${String(max + 1).padStart(3, '0')}/INV/APA/${roman}/${yyyy}`;
+  }
+  function getOrder(id){ return (orders||[]).find(o=>String(o.id)===String(id)); }
+  function computeTotal(items){ return (items||[]).reduce((sum,i)=>sum+Number(i.subtotal ?? (Number(i.quantity||0)*Number(i.unit_price||0))),0); }
+  function computePaid(payments){ return (payments||[]).reduce((sum,p)=>sum+Number(p.amount||0),0); }
+  function statusFor(total,paid){ return paid<=0?'Belum dibayar':paid+0.001>=total?'Lunas':'Belum lunas'; }
+  function addItemRow(name='',qty=1,price=0){
+    const body=$('invoiceItemsBody'); if(!body)return;
+    const tr=document.createElement('tr'); tr.innerHTML=`<td><input class="item-name" aria-label="Nama layanan" placeholder="Nama layanan" value="${safeText(name)}" required></td><td><input class="item-qty" aria-label="Jumlah" type="number" min="0.01" step="0.01" value="${Number(qty)||1}" required></td><td><input class="item-price" aria-label="Harga satuan" type="number" min="0" step="1" value="${Number(price)||0}" required></td><td class="item-subtotal">${money(Number(qty||1)*Number(price||0))}</td><td><button type="button" class="invoice-remove-item" title="Hapus item" aria-label="Hapus item">×</button></td>`;
+    body.appendChild(tr);
+    tr.querySelectorAll('input').forEach(i=>i.addEventListener('input',updateInvoiceTotal));
+    tr.querySelector('.invoice-remove-item').addEventListener('click',()=>{ if(body.children.length<=1){tr.querySelector('.item-name').value='';tr.querySelector('.item-qty').value='1';tr.querySelector('.item-price').value='0';}else tr.remove(); updateInvoiceTotal(); });
+    updateInvoiceTotal();
+  }
+  function readItems(){ return [...($('invoiceItemsBody')?.querySelectorAll('tr')||[])].map(tr=>({item_name:tr.querySelector('.item-name').value.trim(),quantity:Number(tr.querySelector('.item-qty').value),unit_price:Number(tr.querySelector('.item-price').value)})).filter(i=>i.item_name); }
+  function updateInvoiceTotal(){ let total=0; [...($('invoiceItemsBody')?.querySelectorAll('tr')||[])].forEach(tr=>{const q=Number(tr.querySelector('.item-qty').value||0),p=Number(tr.querySelector('.item-price').value||0),s=q*p; total+=s;tr.querySelector('.item-subtotal').textContent=money(s);}); if($('invoiceEditorTotal'))$('invoiceEditorTotal').textContent=money(total); if($('invoiceInitialPayment')){ $('invoiceInitialPayment').max=String(Math.max(0,total)); } }
+  function populateOrderSelect(selectedId = '') {
+    const select = $('invoiceOrderSelect');
+    const searchInput = $('invoiceOrderSearch');
+    const searchInfo = $('invoiceOrderSearchInfo');
+    if (!select) return;
+
+    const keyword = (searchInput?.value || '').trim().toLocaleLowerCase('id-ID');
+    const available = orders || [];
+    const filtered = available.filter(order => {
+      const searchableText = [
+        order.id,
+        order.client,
+        order.nama_tugas,
+        order.harga
+      ].join(' ').toLocaleLowerCase('id-ID');
+      return searchableText.includes(keyword);
+    });
+
+    select.innerHTML = '<option value="">Pilih order yang sesuai</option>' +
+      filtered.map(order => `<option value="${safeText(order.id)}">${safeText(order.client)} — ${safeText(order.nama_tugas)} (${money(order.harga)})</option>`).join('');
+
+    if (selectedId !== '' && selectedId !== null && selectedId !== undefined) {
+      select.value = String(selectedId);
+    }
+
+    if (searchInfo) {
+      searchInfo.textContent = filtered.length
+        ? `${filtered.length} dari ${available.length} order ditampilkan.`
+        : 'Order tidak ditemukan. Coba kata kunci lain.';
+    }
+  }
+  function resetEditor(){
+    invoiceState.editingId = null;
+    $('invoiceForm')?.reset();
+    $('invoiceItemsBody').innerHTML = '';
+    addItemRow('', 1, 0);
+    $('invoiceDate').value = new Date().toISOString().slice(0, 10);
+    $('invoiceInitialPayment').value = '0';
+    $('invoiceOrderSelect').disabled = false;
+    $('invoiceInitialPayment').disabled = false;
+    if ($('invoiceOrderSearch')) $('invoiceOrderSearch').value = '';
+    $('invoiceEditorTitle').textContent = 'Buat Invoice';
+    $('invoiceSaveBtn').textContent = 'Simpan Invoice';
+    $('invoiceInitialPayment').closest('.invoice-payment-box')?.classList.remove('edit-mode-note');
+    const note = $('invoiceEditPaymentNote');
+    if (note) note.remove();
+    populateOrderSelect();
+  }
+  function openEditor(){ const modal=$('invoiceEditorModal'); if(!modal)return; resetEditor(); modal.classList.remove('hidden'); }
+  function openEditInvoice(id){const inv=invoiceState.records.find(r=>String(r.id)===String(id));if(!inv)return;resetEditor();invoiceState.editingId=inv.id;$('invoiceEditorTitle').textContent='Edit Invoice';$('invoiceSaveBtn').textContent='Simpan Perubahan';populateOrderSelect(inv.order_id);$('invoiceOrderSelect').disabled=true;$('invoiceClientName').value=inv.client_name||'';$('invoiceDate').value=String(inv.invoice_date||'').slice(0,10);$('invoiceType').value=inv.invoice_type||'TAGIHAN';$('invoicePaymentMethod').value=inv.payment_method||'';$('invoiceNotes').value=inv.notes||'';$('invoiceItemsBody').innerHTML='';(inv.items||[]).forEach(it=>addItemRow(it.item_name,it.quantity,it.unit_price));if(!inv.items?.length)addItemRow('',1,0);$('invoiceInitialPayment').value='0';$('invoiceInitialPayment').disabled=true;const box=$('invoiceInitialPayment').closest('.invoice-payment-box');if(box&&!$('invoiceEditPaymentNote')){const note=document.createElement('p');note.id='invoiceEditPaymentNote';note.className='invoice-edit-payment-note';note.textContent='Mode edit tidak mengubah riwayat pembayaran. Gunakan tombol Bayar untuk mencatat transaksi baru.';box.appendChild(note);} $('invoiceEditorModal').classList.remove('hidden'); }
+  function closeModal(id){ $(id)?.classList.add('hidden'); }
+  async function loadInvoiceRecords(){
+    const tbody=$('invoiceTableBody'); if(!tbody)return;
+    tbody.innerHTML='<tr><td colspan="8" class="invoice-table-empty">Memuat data invoice...</td></tr>';
+    try{
+      const [ir,itemsR,payR]=await Promise.all([
+        supabaseClient.from('invoices').select('*').order('created_at',{ascending:false}),
+        supabaseClient.from('invoice_items').select('*').order('id',{ascending:true}),
+        supabaseClient.from('payments').select('*').order('payment_date',{ascending:true})
+      ]);
+      if(ir.error)throw ir.error;if(itemsR.error)throw itemsR.error;if(payR.error)throw payR.error;
+      const items=itemsR.data||[],payments=payR.data||[];
+      invoiceState.records=(ir.data||[]).map(inv=>{const invoiceItems=items.filter(i=>String(i.invoice_id)===String(inv.id));const invoicePayments=payments.filter(p=>String(p.invoice_id)===String(inv.id));const total=computeTotal(invoiceItems),paid=computePaid(invoicePayments);return {...inv,items:invoiceItems,payments:invoicePayments,total,paid,remaining:Math.max(0,total-paid),paymentStatus:statusFor(total,paid)};});
+      renderInvoiceList();
+    }catch(err){console.error('Gagal memuat invoice',err);tbody.innerHTML=`<tr><td colspan="8" class="invoice-table-empty">Gagal memuat invoice: ${safeText(err.message||err)}. Periksa tabel dan kebijakan Supabase.</td></tr>`;toast('Data invoice gagal dimuat. Periksa koneksi dan kebijakan Supabase.',true);}
+  }
+  function renderInvoiceList(){
+    const q=($('invoiceSearch')?.value||'').trim().toLowerCase(); const all=invoiceState.records;
+    const rows=all.filter(r=>[r.invoice_number,r.client_name,r.notes,getOrder(r.order_id)?.nama_tugas].some(v=>String(v||'').toLowerCase().includes(q)));
+    if($('invoiceSummaryCount'))$('invoiceSummaryCount').textContent=all.length;
+    if($('invoiceSummaryBilled'))$('invoiceSummaryBilled').textContent=money(all.reduce((s,r)=>s+r.total,0));
+    if($('invoiceSummaryPaid'))$('invoiceSummaryPaid').textContent=money(all.reduce((s,r)=>s+r.paid,0));
+    if($('invoiceSummaryRemaining'))$('invoiceSummaryRemaining').textContent=money(all.reduce((s,r)=>s+r.remaining,0));
+    const body=$('invoiceTableBody'),empty=$('invoiceEmptyState'); if(!body)return;
+    if(!rows.length){body.innerHTML='';empty?.classList.remove('hidden');if(q)body.innerHTML='<tr><td colspan="8" class="invoice-table-empty">Tidak ada invoice yang cocok dengan pencarian.</td></tr>';return;}
+    empty?.classList.add('hidden');
+    body.innerHTML=rows.map(r=>{const order=getOrder(r.order_id);const statusClass=r.paymentStatus==='Lunas'?'lunas':r.paymentStatus==='Belum dibayar'?'draft':'belum';return `<tr><td><strong>${safeText(r.invoice_number)}</strong><br><small>${safeText(dateOnly(r.invoice_date))}</small></td><td>${safeText(r.client_name)}</td><td>${safeText(order?.nama_tugas||'Order #'+r.order_id)}</td><td class="price">${money(r.total)}</td><td class="price">${money(r.paid)}</td><td class="price">${money(r.remaining)}</td><td><span class="invoice-status ${statusClass}">${safeText(r.paymentStatus)}</span></td><td><div class="invoice-actions"><button class="invoice-action-btn" data-invoice-preview="${safeText(r.id)}">Lihat</button><button class="invoice-action-btn" data-invoice-edit="${safeText(r.id)}">Edit</button><button class="invoice-action-btn" data-invoice-payment="${safeText(r.id)}">＋ Bayar</button><button class="invoice-action-btn primary" data-invoice-download="${safeText(r.id)}">PDF</button></div></td></tr>`;}).join('');
+  }
+  async function createInvoice(event){
+    event.preventDefault();
+    const isEdit=Boolean(invoiceState.editingId);
+    const order=getOrder($('invoiceOrderSelect').value);
+    if(!order){toast('Pilih order terlebih dahulu.',true);return;}
+    const items=readItems();
+    if(!items.length||items.some(i=>!i.item_name||!Number.isFinite(i.quantity)||i.quantity<=0||!Number.isFinite(i.unit_price)||i.unit_price<0)){toast('Periksa nama layanan, jumlah, dan harga item.',true);return;}
+    const total=items.reduce((sum,i)=>sum+i.quantity*i.unit_price,0);
+    const initial=Number($('invoiceInitialPayment').value||0);
+    if(!isEdit&&(initial<0||initial>total)){toast('Nominal pembayaran awal tidak boleh melebihi total tagihan.',true);return;}
+    const existing=isEdit?invoiceState.records.find(r=>String(r.id)===String(invoiceState.editingId)):null;
+    if(isEdit&&existing&&total+0.001<existing.paid){toast('Total baru tidak boleh lebih kecil daripada pembayaran yang sudah diterima.',true);return;}
+    const btn=$('invoiceSaveBtn');btn.disabled=true;btn.textContent=isEdit?'Menyimpan perubahan...':'Menyimpan...';let createdId=null;let oldItemsRemoved=false;
+    try{
+      const date=$('invoiceDate').value||new Date().toISOString().slice(0,10);const type=$('invoiceType').value;
+      if(isEdit && (existing?.invoice_type !== 'TAGIHAN' || type !== 'TAGIHAN')){
+        toast('Dokumen DP, cicilan, dan pelunasan adalah bukti transaksi yang tersimpan. Buat pembayaran baru melalui tombol + Bayar agar nomor baru terbit dan riwayat lama tidak berubah.', true);
+        return;
+      }
+      if(isEdit){
+        const {error:updateError}=await supabaseClient.from('invoices').update({invoice_type:type,invoice_date:date,client_name:$('invoiceClientName').value.trim()||order.client||'Klien',payment_method:$('invoicePaymentMethod').value||null,notes:$('invoiceNotes').value.trim()||null,updated_at:new Date().toISOString()}).eq('id',existing.id);
+        if(updateError)throw updateError;
+        const {error:deleteError}=await supabaseClient.from('invoice_items').delete().eq('invoice_id',existing.id);if(deleteError)throw deleteError;oldItemsRemoved=true;
+        const {error:itemError}=await supabaseClient.from('invoice_items').insert(items.map(i=>({...i,invoice_id:existing.id})));if(itemError)throw itemError;
+        invoiceState.editingId=null;closeModal('invoiceEditorModal');await loadInvoiceRecords();toast('Perubahan invoice berhasil disimpan.');
+      }else{
+        const number=await generateInvoiceNumber(date);
+        const {data:inv,error}=await supabaseClient.from('invoices').insert({order_id:order.id,invoice_number:number,invoice_type:type,invoice_date:date,client_name:order.client||$('invoiceClientName').value||'Klien',payment_method:$('invoicePaymentMethod').value||null,notes:$('invoiceNotes').value.trim()||null,status:'TERBIT'}).select('*').single();if(error)throw error;createdId=inv.id;
+        const {error:itemError}=await supabaseClient.from('invoice_items').insert(items.map(i=>({...i,invoice_id:inv.id})));if(itemError)throw itemError;
+        if(initial>0){const {error:payError}=await supabaseClient.from('payments').insert({invoice_id:inv.id,amount:initial,payment_date:new Date(date+'T12:00:00').toISOString(),payment_method:$('invoicePaymentMethod').value||null,notes:`Pembayaran awal (${type})`});if(payError)throw payError;}
+        invoiceState.editingId=null;closeModal('invoiceEditorModal');await loadInvoiceRecords();toast(`Invoice ${number} berhasil disimpan.`);
+      }
+    }catch(err){console.error('Gagal menyimpan invoice',err);if(isEdit&&oldItemsRemoved&&existing){try{await supabaseClient.from('invoice_items').insert((existing.items||[]).map(i=>({invoice_id:existing.id,item_name:i.item_name,quantity:i.quantity,unit_price:i.unit_price})));}catch(restoreErr){console.error('Pemulihan item invoice gagal',restoreErr);}}if(createdId){try{await supabaseClient.from('invoice_items').delete().eq('invoice_id',createdId);await supabaseClient.from('payments').delete().eq('invoice_id',createdId);await supabaseClient.from('invoices').delete().eq('id',createdId);}catch(cleanErr){console.warn(cleanErr);}}toast((isEdit?'Perubahan invoice gagal disimpan: ':'Invoice gagal disimpan: ')+(err.message||'Periksa koneksi dan kebijakan tabel.'),true);}
+    finally{btn.disabled=false;btn.textContent=invoiceState.editingId?'Simpan Perubahan':'Simpan Invoice';}
+  }
+  function openPayment(id){const inv=invoiceState.records.find(r=>String(r.id)===String(id));if(!inv)return;invoiceState.activePaymentId=inv.id;$('invoicePaymentId').value=inv.id;$('invoicePaymentSubtitle').textContent=`${inv.client_name} · ${inv.invoice_number}`;$('invoicePaymentRemaining').textContent=money(inv.remaining);$('invoicePaymentAmount').value=inv.remaining>0?String(inv.remaining):'';$('invoicePaymentAmount').max=String(inv.remaining);$('invoicePaymentDate').value=dateTimeLocalNow();$('invoicePaymentType').value=inv.paid<=0?'DP':'CICILAN';$('invoicePaymentMethod2').value='';$('invoicePaymentReference').value='';$('invoicePaymentNotes').value='';$('invoicePaymentModal').classList.remove('hidden');}
+  async function savePayment(event){
+    event.preventDefault();
+    const sourceId = $('invoicePaymentId').value;
+    const source = invoiceState.records.find(r => String(r.id) === String(sourceId));
+    if (!source) return;
+
+    const amount = Number($('invoicePaymentAmount').value);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > source.remaining) {
+      toast('Nominal harus lebih dari nol dan tidak melebihi sisa tagihan.', true);
+      return;
+    }
+
+    const type = $('invoicePaymentType').value;
+    if (type === 'PELUNASAN' && Math.abs(amount - source.remaining) > 0.5) {
+      toast('Nominal pelunasan harus sama dengan sisa tagihan.', true);
+      return;
+    }
+    if (type !== 'PELUNASAN' && amount >= source.remaining && source.remaining > 0) {
+      toast('Pilih jenis Pelunasan jika pembayaran menutup seluruh sisa tagihan.', true);
+      return;
+    }
+
+    const btn = $('invoicePaymentSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Membuat kwitansi baru...';
+    let newInvoiceId = null;
+
+    try {
+      const dt = new Date($('invoicePaymentDate').value);
+      if (Number.isNaN(dt.getTime())) throw new Error('Tanggal pembayaran tidak valid.');
+
+      const order = getOrder(source.order_id);
+      const paymentDate = dt.toISOString();
+      const dateOnlyValue = paymentDate.slice(0, 10);
+      const method = $('invoicePaymentMethod2').value || source.payment_method || null;
+      const reference = $('invoicePaymentReference').value.trim() || null;
+      const paymentNotes = $('invoicePaymentNotes').value.trim();
+      const typeLabel = ({ DP: 'DP', CICILAN: 'Cicilan', PELUNASAN: 'Pelunasan' })[type] || type;
+
+      // Hitung akumulasi pembayaran order dari seluruh dokumen yang sudah tersimpan.
+      const orderInvoices = invoiceState.records.filter(r => String(r.order_id) === String(source.order_id));
+      const paidBefore = orderInvoices.reduce((sum, r) => sum + Number(r.paid || 0), 0);
+      const billedFromTagihan = orderInvoices
+        .filter(r => r.invoice_type === 'TAGIHAN')
+        .reduce((max, r) => Math.max(max, Number(r.total || 0)), 0);
+      const billedTotal = billedFromTagihan || Math.max(
+        Number(order?.harga || 0),
+        ...orderInvoices.map(r => Number(r.total || 0))
+      );
+      const remainingAfter = Math.max(0, billedTotal - paidBefore - amount);
+      const receiptNotes = [
+        `Kwitansi ${typeLabel} untuk order: ${order?.nama_tugas || 'Order #' + source.order_id}.`,
+        `Mengacu pada dokumen ${source.invoice_number}.`,
+        `Total tagihan order: ${money(billedTotal)}.`,
+        `Pembayaran diterima: ${money(amount)}.`,
+        `Akumulasi pembayaran setelah transaksi: ${money(paidBefore + amount)}.`,
+        `Sisa tagihan order setelah transaksi: ${money(remainingAfter)}.`,
+        paymentNotes ? `Catatan: ${paymentNotes}` : '',
+        reference ? `Referensi transaksi: ${reference}` : ''
+      ].filter(Boolean).join(' ');
+
+      // Setiap pembayaran membuat dokumen baru; dokumen sumber tidak diubah.
+      const number = await generateInvoiceNumber(dateOnlyValue);
+      const { data: receipt, error: invoiceError } = await supabaseClient
+        .from('invoices')
+        .insert({
+          order_id: source.order_id,
+          invoice_number: number,
+          invoice_type: type,
+          invoice_date: dateOnlyValue,
+          client_name: source.client_name || order?.client || 'Klien',
+          payment_method: method,
+          notes: receiptNotes,
+          status: 'TERBIT'
+        })
+        .select('*')
+        .single();
+      if (invoiceError) throw invoiceError;
+      newInvoiceId = receipt.id;
+
+      const itemName = `Pembayaran ${typeLabel} — ${order?.nama_tugas || 'Layanan'}`;
+      const { error: itemError } = await supabaseClient
+        .from('invoice_items')
+        .insert([{
+          invoice_id: receipt.id,
+          item_name: itemName,
+          quantity: 1,
+          unit_price: amount
+        }]);
+      if (itemError) throw itemError;
+
+      const { error: paymentError } = await supabaseClient
+        .from('payments')
+        .insert({
+          invoice_id: receipt.id,
+          amount,
+          payment_date: paymentDate,
+          payment_method: method,
+          transaction_reference: reference,
+          notes: paymentNotes || `Pembayaran ${typeLabel}`
+        });
+      if (paymentError) throw paymentError;
+
+      closeModal('invoicePaymentModal');
+      await loadInvoiceRecords();
+      toast(`Kwitansi ${typeLabel} baru ${number} berhasil dibuat. Dokumen sebelumnya tetap tersimpan.`);
+    } catch (err) {
+      console.error('Gagal membuat kwitansi pembayaran baru:', err);
+      if (newInvoiceId) {
+        // Bersihkan dokumen baru yang belum lengkap jika salah satu langkah gagal.
+        try {
+          await supabaseClient.from('payments').delete().eq('invoice_id', newInvoiceId);
+          await supabaseClient.from('invoice_items').delete().eq('invoice_id', newInvoiceId);
+          await supabaseClient.from('invoices').delete().eq('id', newInvoiceId);
+        } catch (cleanupError) {
+          console.warn('Pembersihan dokumen pembayaran yang gagal:', cleanupError);
+        }
+      }
+      toast('Kwitansi baru gagal dibuat: ' + (err.message || 'Kesalahan Supabase'), true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Simpan Pembayaran';
+    }
+  }
+  function populatePaper(inv){const order=getOrder(inv.order_id);const set=(id,v)=>{const el=$(id);if(el)el.textContent=v??'-';};set('invoicePreviewSubtitle',`${inv.client_name} · ${inv.invoice_number}`);set('paperDocTitle',inv.invoice_type==='TAGIHAN'?'INVOICE':'KWITANSI');set('paperInvoiceNumber',inv.invoice_number);set('paperInvoiceType',({TAGIHAN:'TAGIHAN PEMBAYARAN',DP:'KWITANSI UANG MUKA',CICILAN:'KWITANSI CICILAN',PELUNASAN:'KWITANSI PELUNASAN'})[inv.invoice_type]||'DOKUMEN PEMBAYARAN');set('paperMetaNumber',inv.invoice_number);set('paperMetaDate',dateOnly(inv.invoice_date));set('paperMetaStatus',inv.paymentStatus);set('paperClient',inv.client_name);set('paperOrderName',order?.nama_tugas||'Order #'+inv.order_id);set('paperNotes',inv.notes||'Pembayaran layanan Axentra Prima Aksara.');set('paperTotal',money(inv.total));set('paperPaid',money(inv.paid));set('paperRemaining',money(inv.remaining));
+    const ib=$('paperItemsBody');ib.innerHTML=inv.items.map((it,i)=>`<tr><td>${i+1}</td><td>${safeText(it.item_name)}</td><td>${Number(it.quantity).toLocaleString('id-ID')}</td><td>${money(it.unit_price)}</td><td>${money(it.subtotal)}</td></tr>`).join('');const ph=$('paperPaymentHistory');ph.innerHTML=inv.payments.length?inv.payments.map(p=>`<div class="invoice-payment-history-row"><span>${safeText(dateOnly(String(p.payment_date).slice(0,10)))} · ${safeText(p.payment_method||'Metode tidak dicantumkan')}</span><strong>${money(p.amount)}</strong></div>`).join(''):'Belum ada pembayaran.';
+    const logo=$('invoicePaper')?.querySelector('.invoice-paper-logo');if(logo){logo.src='logo.png';logo.onerror=()=>{logo.style.display='none';};}const cap=$('invoicePaper')?.querySelector('.invoice-paper-sign img');if(cap){cap.src='cap.png';cap.onerror=()=>{cap.style.display='none';};}
+  }
+  function openPreview(id){const inv=invoiceState.records.find(r=>String(r.id)===String(id));if(!inv)return;invoiceState.activePreviewId=inv.id;populatePaper(inv);$('invoicePreviewModal').classList.remove('hidden');}
+  async function ensurePdfLibraries(){
+    const loadScript=(src,test)=>new Promise((resolve,reject)=>{if(test())return resolve();const script=document.createElement('script');script.src=src;script.onload=()=>test()?resolve():reject(new Error('Pustaka tidak dapat diinisialisasi: '+src));script.onerror=()=>reject(new Error('Tidak dapat memuat pustaka PDF. Periksa koneksi internet atau blokir CDN.'));document.head.appendChild(script);});
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',()=>typeof window.html2canvas==='function');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>Boolean(window.jspdf&&window.jspdf.jsPDF));
+  }
+  async function downloadPdf(){
+    const inv=invoiceState.records.find(r=>String(r.id)===String(invoiceState.activePreviewId));if(!inv)return;
+    const paper=$('invoicePaper'),button=$('invoicePreviewDownload'),originalTransform=paper.style.transform;button.disabled=true;button.textContent='Menyiapkan PDF...';
+    try{
+      await ensurePdfLibraries();
+      paper.style.transform='none';
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      await Promise.all([...paper.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
+      const canvas=await window.html2canvas(paper,{scale:3,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,windowWidth:paper.scrollWidth,windowHeight:paper.scrollHeight});
+      const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a5',compress:true});
+      const pageW=148,pageH=210,margin=0,ratio=Math.min((pageW-2*margin)/canvas.width,(pageH-2*margin)/canvas.height),w=canvas.width*ratio,h=canvas.height*ratio,x=(pageW-w)/2,y=(pageH-h)/2;
+      pdf.addImage(canvas.toDataURL('image/jpeg',0.96),'JPEG',x,y,w,h,undefined,'FAST');
+      pdf.save(`${inv.invoice_number.replace(/[^a-zA-Z0-9-_]/g,'_')}.pdf`);toast('PDF invoice A5 berhasil dibuat.');
+    }catch(err){console.error('PDF invoice gagal:',err);toast('PDF gagal dibuat: '+(err.message||err),true);}
+    finally{paper.style.transform=originalTransform;button.disabled=false;button.textContent='↓ Unduh PDF';}
+  }
+  function printInvoice(){document.body.classList.add('invoice-printing');window.print();setTimeout(()=>document.body.classList.remove('invoice-printing'),700);}
+  function wire(){
+    $('invoiceOrderSearch')?.addEventListener('input', () => {
+      const selectedId = $('invoiceOrderSelect')?.value || '';
+      populateOrderSelect(selectedId);
+    });
+    $('invoiceCreateBtn')?.addEventListener('click',openEditor);$('invoiceEmptyCreateBtn')?.addEventListener('click',openEditor);$('invoiceEditorClose')?.addEventListener('click',()=>closeModal('invoiceEditorModal'));$('invoiceEditorCancel')?.addEventListener('click',()=>closeModal('invoiceEditorModal'));$('invoiceForm')?.addEventListener('submit',createInvoice);$('invoiceAddItemBtn')?.addEventListener('click',()=>addItemRow('',1,0));$('invoiceOrderSelect')?.addEventListener('change',()=>{const o=getOrder($('invoiceOrderSelect').value);$('invoiceClientName').value=o?.client||'';$('invoiceItemsBody').innerHTML='';if(o)addItemRow(o.nama_tugas||'Layanan',1,Number(o.harga||0));else addItemRow('',1,0);$('invoiceInitialPayment').value='0';$('invoiceType').value=Number(o?.dp||0)>0?'DP':'TAGIHAN';updateInvoiceTotal();});$('invoiceSearch')?.addEventListener('input',renderInvoiceList);
+    $('invoiceTableBody')?.addEventListener('click',e=>{const p=e.target.closest('[data-invoice-preview]'),edit=e.target.closest('[data-invoice-edit]'),pay=e.target.closest('[data-invoice-payment]'),dl=e.target.closest('[data-invoice-download]');if(p)openPreview(p.dataset.invoicePreview);if(edit)openEditInvoice(edit.dataset.invoiceEdit);if(pay)openPayment(pay.dataset.invoicePayment);if(dl){openPreview(dl.dataset.invoiceDownload);setTimeout(downloadPdf,150);}});
+    $('invoicePaymentForm')?.addEventListener('submit',savePayment);$('invoicePaymentClose')?.addEventListener('click',()=>closeModal('invoicePaymentModal'));$('invoicePaymentCancel')?.addEventListener('click',()=>closeModal('invoicePaymentModal'));$('invoicePaymentType')?.addEventListener('change',()=>{const inv=invoiceState.records.find(r=>String(r.id)===String($('invoicePaymentId').value));if(inv&&$('invoicePaymentType').value==='PELUNASAN')$('invoicePaymentAmount').value=String(inv.remaining);});$('invoicePreviewClose')?.addEventListener('click',()=>closeModal('invoicePreviewModal'));$('invoicePreviewDownload')?.addEventListener('click',downloadPdf);$('invoicePreviewPrint')?.addEventListener('click',printInvoice);
+    ['invoiceEditorModal','invoicePaymentModal','invoicePreviewModal'].forEach(id=>$(id)?.addEventListener('click',e=>{if(e.target.id===id)closeModal(id);}));document.addEventListener('keydown',e=>{if(e.key==='Escape')['invoiceEditorModal','invoicePaymentModal','invoicePreviewModal'].forEach(closeModal);});window.addEventListener('afterprint',()=>document.body.classList.remove('invoice-printing'));
+  }
+  document.addEventListener('DOMContentLoaded',wire);window.loadInvoiceRecords=loadInvoiceRecords;
 })();
