@@ -1599,3 +1599,15 @@ body.receipt-modal-open{overflow:hidden}
   font-size: 12px;
   line-height: 1.5;
 }
+/* LOGO BRAND AXENTRA */
+.brand img.sidebar-logo {
+    display: block;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 3px;
+    flex-shrink: 0;
+}
